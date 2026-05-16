@@ -1,1 +1,492 @@
-<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Чек-лист магазина</title><style>:root{--red:#f60c15;--dark:#161616;--bg:#f5f5f5;--green:#16a34a;--orange:#f97316;--blue:#2563eb}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--dark)}.app{max-width:560px;margin:auto;padding:16px}.hero{background:linear-gradient(135deg,#111,#f60c15);color:#fff;padding:24px;border-radius:28px}.hero h1{margin:0 0 10px;font-size:34px}.progress{height:12px;background:#ddd;border-radius:999px;overflow:hidden;margin:18px 0}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--red),#ff9d00);transition:.3s}.block{background:#fff;border-radius:24px;padding:16px;margin-bottom:14px;opacity:.45;transition:.3s}.block.active,.block.done{opacity:1}.head{display:flex;gap:12px;align-items:center;margin-bottom:10px}.icon{width:48px;height:48px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px}.personnel{background:var(--orange)}.product{background:var(--green)}.process{background:var(--blue)}.sales{background:var(--red)}.question{display:flex;gap:12px;padding:12px 0;border-top:1px solid #eee;align-items:flex-start}.question:first-child{border-top:0}.check{width:34px;height:34px;border-radius:12px;border:2px solid #ccc;flex:0 0 34px;display:flex;align-items:center;justify-content:center;font-weight:900}.question.done .check{background:var(--green);border-color:var(--green);color:#fff}.question.done .check:before{content:'✓'}.locked{display:none;color:#777;padding:10px 0}.block:not(.active):not(.done) .questions{display:none}.block:not(.active):not(.done) .locked{display:block}.result{display:none;background:#fff;padding:18px;border-radius:28px;margin-top:20px}.result.show{display:block}.donut{width:220px;height:220px;border-radius:50%;margin:18px auto;position:relative}.donut:after{content:attr(data-label);position:absolute;inset:34px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900}.legend div{display:flex;justify-content:space-between;background:#f7f7f7;padding:12px;border-radius:14px;margin-top:8px}button.reset{width:100%;padding:15px;border:0;border-radius:16px;background:#111;color:#fff;font-weight:800;margin-top:14px}</style></head><body><main class='app'><section class='hero'><h1>Проверка магазина</h1><p>4 блока · 12 вопросов · мобильная версия</p></section><div class='progress'><div class='bar' id='bar'></div></div><div id='blocks'></div><section class='result' id='result'><h2>Статистика проверки</h2><div class='donut' id='donut' data-label='100%'></div><div class='legend' id='legend'></div><button class='reset' onclick='resetAll()'>Начать заново</button></section></main><script>const data=[{id:'personnel',title:'Персонал',cls:'personnel',icon:'👥',q:['Сотрудники готовы к работе','Есть понимание KPI','Продавцы активно работают с покупателями']},{id:'product',title:'Товар',cls:'product',icon:'🧥',q:['Товар отпарен','Размеры представлены','Ценники корректны']},{id:'process',title:'Процессы',cls:'process',icon:'⚙️',q:['Касса работает','Поставка разобрана','Зал чистый и освещен']},{id:'sales',title:'Продажи',cls:'sales',icon:'📈',q:['Есть допродажи','Команда знает план','Контролируются примерки']}];const total=12;let state=JSON.parse(localStorage.getItem('checklist-v1')||'{}');data.forEach(b=>{if(!state[b.id])state[b.id]=[false,false,false]});function done(b){return state[b.id].every(Boolean)}function activeIndex(){const i=data.findIndex(b=>!done(b));return i===-1?3:i}function render(){const root=document.getElementById('blocks');root.innerHTML='';const ai=activeIndex();data.forEach((b,bi)=>{const el=document.createElement('div');el.className='block '+(done(b)?'done':'')+' '+((bi===ai&&!done(b))?'active':'');el.innerHTML=`<div class='head'><div class='icon ${b.cls}'>${b.icon}</div><div><b>${b.title}</b><div>${state[b.id].filter(Boolean).length}/3</div></div></div><div class='locked'>Заверши предыдущий блок</div><div class='questions'>${b.q.map((q,i)=>`<div class='question ${state[b.id][i]?'done':''}' data-b='${b.id}' data-i='${i}'><div class='check'></div><div>${q}</div></div>`).join('')}</div>`;root.appendChild(el)});document.querySelectorAll('.question').forEach(q=>q.onclick=()=>{const b=q.dataset.b;const i=+q.dataset.i;state[b][i]=!state[b][i];save();render()});const completed=data.reduce((s,b)=>s+state[b.id].filter(Boolean).length,0);document.getElementById('bar').style.width=(completed/total*100)+'%';if(completed===total)showResult();else document.getElementById('result').classList.remove('show')}function showResult(){const result=document.getElementById('result');result.classList.add('show');const colors=['#f97316','#16a34a','#2563eb','#f60c15'];let start=0;let grad=[];data.forEach((b,i)=>{let deg=90;grad.push(`${colors[i]} ${start}deg ${start+deg}deg`);start+=deg});const donut=document.getElementById('donut');donut.style.background=`conic-gradient(${grad.join(',')})`;const legend=document.getElementById('legend');legend.innerHTML=data.map((b,i)=>`<div><span>${b.title}</span><b>3/3</b></div>`).join('')}function save(){localStorage.setItem('checklist-v1',JSON.stringify(state))}function resetAll(){localStorage.removeItem('checklist-v1');state={};data.forEach(b=>state[b.id]=[false,false,false]);save();render();window.scrollTo({top:0,behavior:'smooth'})}render();</script></body></html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07111f" />
+  <title>Биржа исходов</title>
+  <style>
+    :root {
+      --bg: #07111f;
+      --panel: rgba(255,255,255,.08);
+      --panel-strong: rgba(255,255,255,.14);
+      --text: #f5f7fb;
+      --muted: #9aa8bd;
+      --green: #24d18c;
+      --red: #ff4d67;
+      --blue: #45a3ff;
+      --yellow: #ffd166;
+      --shadow: 0 24px 80px rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(69,163,255,.28), transparent 28%),
+        radial-gradient(circle at 86% 18%, rgba(36,209,140,.22), transparent 24%),
+        linear-gradient(180deg, #07111f 0%, #0a1020 50%, #05070d 100%);
+      overflow-x: hidden;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      width: min(100%, 540px);
+      margin: 0 auto;
+      padding: 18px 14px max(22px, env(safe-area-inset-bottom));
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: #07111f;
+      box-shadow: 0 12px 34px rgba(69,163,255,.24);
+    }
+
+    h1 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+    .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+    .score {
+      text-align: right;
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+
+    .score span { display: block; color: var(--muted); font-size: 12px; }
+    .score b { font-size: 24px; letter-spacing: -.04em; }
+
+    .hero {
+      border-radius: 28px;
+      padding: 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,.13), rgba(255,255,255,.05));
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      margin-bottom: 14px;
+    }
+
+    .hero-title { font-size: 34px; line-height: .95; margin: 8px 0 10px; letter-spacing: -.065em; }
+    .hero p { color: var(--muted); margin: 0; line-height: 1.45; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .stat {
+      border-radius: 18px;
+      padding: 12px 10px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .stat span { display: block; color: var(--muted); font-size: 11px; }
+    .stat b { display: block; font-size: 18px; margin-top: 4px; }
+
+    .panel {
+      border-radius: 28px;
+      padding: 14px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      backdrop-filter: blur(12px);
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 10px;
+      margin: 2px 4px 12px;
+    }
+
+    .section-title h2 { margin: 0; font-size: 18px; }
+    .section-title small { color: var(--muted); text-align: right; }
+
+    .outcomes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .outcome {
+      position: relative;
+      border: 0;
+      color: var(--text);
+      text-align: left;
+      min-height: 154px;
+      padding: 14px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.09);
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: inset 0 0 0 1px transparent;
+      cursor: pointer;
+      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+      touch-action: manipulation;
+    }
+
+    .outcome:active { transform: scale(.985); }
+    .outcome.selected {
+      background: rgba(69,163,255,.18);
+      box-shadow: inset 0 0 0 2px var(--blue), 0 16px 42px rgba(69,163,255,.12);
+    }
+
+    .outcome.good.selected { box-shadow: inset 0 0 0 2px var(--green), 0 16px 42px rgba(36,209,140,.14); }
+    .outcome.risky.selected { box-shadow: inset 0 0 0 2px var(--yellow), 0 16px 42px rgba(255,209,102,.12); }
+
+    .tag { color: var(--muted); font-size: 12px; }
+    .coef { font-size: 42px; font-weight: 900; letter-spacing: -.08em; margin: 8px 0 4px; }
+    .chance { font-size: 14px; color: var(--muted); }
+    .hint { position: absolute; left: 14px; right: 14px; bottom: 14px; font-size: 12px; color: var(--muted); line-height: 1.35; }
+
+    .bet-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+
+    .bet-input {
+      width: 100%;
+      min-height: 56px;
+      border: 1px solid rgba(255,255,255,.12);
+      outline: 0;
+      border-radius: 18px;
+      padding: 0 16px;
+      color: var(--text);
+      background: rgba(0,0,0,.22);
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .bet-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(69,163,255,.14); }
+
+    .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+
+    .chip, .play, .reset {
+      border: 0;
+      border-radius: 18px;
+      color: var(--text);
+      background: var(--panel-strong);
+      min-height: 46px;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .chip:active, .play:active, .reset:active { transform: scale(.985); }
+
+    .play {
+      width: 100%;
+      min-height: 62px;
+      margin-top: 12px;
+      color: #06111e;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      box-shadow: 0 18px 50px rgba(36,209,140,.18);
+      font-size: 18px;
+    }
+
+    .play:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      filter: grayscale(.4);
+    }
+
+    .reset { width: 100%; margin-top: 10px; }
+
+    .result {
+      border-radius: 24px;
+      padding: 16px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.08);
+      display: none;
+      line-height: 1.45;
+    }
+
+    .result.show { display: block; animation: pop .22s ease both; }
+    @keyframes pop { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .result.win { border-color: rgba(36,209,140,.5); }
+    .result.lose { border-color: rgba(255,77,103,.5); }
+    .result h3 { margin: 0 0 8px; font-size: 24px; }
+    .result p { margin: 6px 0; color: var(--muted); }
+    .result strong { color: var(--text); }
+
+    .history { display: grid; gap: 8px; max-height: 245px; overflow: auto; padding-right: 2px; }
+    .deal { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 16px; background: rgba(0,0,0,.18); color: var(--muted); font-size: 13px; }
+    .deal b { color: var(--text); }
+    .deal.win b:last-child { color: var(--green); }
+    .deal.lose b:last-child { color: var(--red); }
+
+    .game-over { display: none; text-align: center; padding: 16px; }
+    .game-over.show { display: block; }
+
+    .note { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 12px 4px 0; }
+
+    @media (max-width: 380px) {
+      .hero-title { font-size: 30px; }
+      .coef { font-size: 36px; }
+      .outcomes { gap: 8px; }
+      .outcome { padding: 12px; min-height: 148px; }
+      .hint { left: 12px; right: 12px; bottom: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <div class="brand">
+        <div class="logo">₿</div>
+        <div>
+          <h1>Биржа исходов</h1>
+          <div class="sub">мобильная игра на очки</div>
+        </div>
+      </div>
+      <div class="score">
+        <span>Баланс</span>
+        <b id="score">500</b>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="tag">Раунд <span id="round">1</span></div>
+      <div class="hero-title">Выбери риск. Забери выплату.</div>
+      <p>Есть два исхода: коэффициент 1.5 с шансом 70% и коэффициент 2.2 с шансом 30%. Ставка списывается при проигрыше, при победе начисляется чистая прибыль.</p>
+      <div class="stats">
+        <div class="stat"><span>Старт</span><b>500</b></div>
+        <div class="stat"><span>Сделок</span><b id="trades">0</b></div>
+        <div class="stat"><span>Лучший баланс</span><b id="best">500</b></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>1. Выбери исход</h2>
+        <small>вероятности уже встроены</small>
+      </div>
+      <div class="outcomes">
+        <button class="outcome good selected" data-option="safe" type="button">
+          <div class="tag">Стабильный</div>
+          <div class="coef">1.5×</div>
+          <div class="chance">шанс победы 70%</div>
+          <div class="hint">меньше риск, меньше прибыль</div>
+        </button>
+        <button class="outcome risky" data-option="risky" type="button">
+          <div class="tag">Рискованный</div>
+          <div class="coef">2.2×</div>
+          <div class="chance">шанс победы 30%</div>
+          <div class="hint">больше риск, выше прибыль</div>
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>2. Введи ставку</h2>
+        <small>от 1 до баланса</small>
+      </div>
+      <div class="bet-row">
+        <input id="bet" class="bet-input" inputmode="numeric" pattern="[0-9]*" value="50" aria-label="Размер ставки" />
+        <button class="chip" id="maxBtn" type="button">MAX</button>
+      </div>
+      <div class="chips">
+        <button class="chip" type="button" data-bet="25">25</button>
+        <button class="chip" type="button" data-bet="50">50</button>
+        <button class="chip" type="button" data-bet="100">100</button>
+        <button class="chip" type="button" data-bet="250">250</button>
+      </div>
+      <button id="play" class="play" type="button">Сделать ставку</button>
+      <button id="reset" class="reset" type="button">Сбросить игру</button>
+      <div class="note">Это симулятор на виртуальные очки. Реальных денег, платежей и внешних сервисов здесь нет.</div>
+    </section>
+
+    <section id="result" class="result"></section>
+
+    <section class="panel">
+      <div class="section-title">
+        <h2>История</h2>
+        <small>последние 12 сделок</small>
+      </div>
+      <div id="history" class="history"></div>
+      <div id="gameOver" class="game-over">
+        <h2>Баланс обнулён</h2>
+        <p class="sub">Холодная биржа съела депозит. Нажми сброс, чтобы начать заново.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const OPTIONS = {
+      safe: { title: '1.5×', coefficient: 1.5, probability: 0.7, label: 'Стабильный исход' },
+      risky: { title: '2.2×', coefficient: 2.2, probability: 0.3, label: 'Рискованный исход' }
+    };
+
+    const START_SCORE = 500;
+    const STORAGE_KEY = 'exchange-odds-game-v1';
+
+    let state = loadState();
+
+    const scoreEl = document.getElementById('score');
+    const roundEl = document.getElementById('round');
+    const tradesEl = document.getElementById('trades');
+    const bestEl = document.getElementById('best');
+    const betEl = document.getElementById('bet');
+    const playEl = document.getElementById('play');
+    const resetEl = document.getElementById('reset');
+    const maxBtn = document.getElementById('maxBtn');
+    const resultEl = document.getElementById('result');
+    const historyEl = document.getElementById('history');
+    const gameOverEl = document.getElementById('gameOver');
+
+    document.querySelectorAll('.outcome').forEach(button => {
+      button.addEventListener('click', () => {
+        state.selected = button.dataset.option;
+        saveState();
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-bet]').forEach(button => {
+      button.addEventListener('click', () => {
+        betEl.value = Math.min(Number(button.dataset.bet), state.score || 0);
+        validateBet();
+      });
+    });
+
+    maxBtn.addEventListener('click', () => {
+      betEl.value = state.score;
+      validateBet();
+    });
+
+    betEl.addEventListener('input', () => {
+      betEl.value = betEl.value.replace(/[^0-9]/g, '');
+      validateBet();
+    });
+
+    playEl.addEventListener('click', makeTrade);
+    resetEl.addEventListener('click', resetGame);
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (saved && Number.isFinite(saved.score)) return saved;
+      } catch (error) {}
+      return { score: START_SCORE, best: START_SCORE, round: 1, trades: 0, selected: 'safe', history: [] };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function validateBet() {
+      const bet = Number(betEl.value);
+      const valid = Number.isInteger(bet) && bet >= 1 && bet <= state.score && state.score > 0;
+      playEl.disabled = !valid;
+      return valid;
+    }
+
+    function makeTrade() {
+      if (!validateBet()) return;
+
+      const bet = Number(betEl.value);
+      const option = OPTIONS[state.selected];
+      const random = Math.random();
+      const isWin = random < option.probability;
+      const profit = isWin ? Math.floor(bet * (option.coefficient - 1)) : -bet;
+
+      state.score += profit;
+      state.best = Math.max(state.best, state.score);
+      state.trades += 1;
+      state.round += 1;
+
+      const record = {
+        round: state.trades,
+        option: option.title,
+        chance: Math.round(option.probability * 100),
+        bet,
+        profit,
+        score: state.score,
+        isWin
+      };
+
+      state.history.unshift(record);
+      state.history = state.history.slice(0, 12);
+
+      if (state.score > 0 && Number(betEl.value) > state.score) {
+        betEl.value = state.score;
+      }
+
+      saveState();
+      showResult(record);
+      render();
+    }
+
+    function showResult(record) {
+      resultEl.className = 'result show ' + (record.isWin ? 'win' : 'lose');
+      resultEl.innerHTML = record.isWin
+        ? `<h3>Победа +${record.profit} очков</h3><p>Сработал исход <strong>${record.option}</strong>. Ставка: <strong>${record.bet}</strong>. Новый баланс: <strong>${record.score}</strong>.</p>`
+        : `<h3>Проигрыш ${record.profit} очков</h3><p>Исход <strong>${record.option}</strong> не прошёл. Ставка списана. Новый баланс: <strong>${record.score}</strong>.</p>`;
+    }
+
+    function render() {
+      scoreEl.textContent = state.score;
+      roundEl.textContent = state.round;
+      tradesEl.textContent = state.trades;
+      bestEl.textContent = state.best;
+
+      document.querySelectorAll('.outcome').forEach(button => {
+        button.classList.toggle('selected', button.dataset.option === state.selected);
+      });
+
+      historyEl.innerHTML = state.history.length
+        ? state.history.map(item => `
+          <div class="deal ${item.isWin ? 'win' : 'lose'}">
+            <span>#${item.round} · ${item.option} · ставка ${item.bet}</span>
+            <b>${item.profit > 0 ? '+' : ''}${item.profit}</b>
+          </div>
+        `).join('')
+        : '<div class="deal"><span>Сделок пока нет</span><b>—</b></div>';
+
+      gameOverEl.classList.toggle('show', state.score <= 0);
+      playEl.disabled = state.score <= 0 || !validateBet();
+    }
+
+    function resetGame() {
+      state = { score: START_SCORE, best: START_SCORE, round: 1, trades: 0, selected: 'safe', history: [] };
+      betEl.value = 50;
+      resultEl.className = 'result';
+      resultEl.innerHTML = '';
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    render();
+  </script>
+</body>
+</html>
