@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#09090f" />
+  <title>Case Points Game</title>
+  <style>
+    :root {
+      --bg: #09090f;
+      --panel: rgba(255,255,255,.08);
+      --panel2: rgba(255,255,255,.12);
+      --text: #f7f7fb;
+      --muted: #a8a8b8;
+      --accent: #ff2b3d;
+      --accent2: #7c3cff;
+      --good: #2cff9b;
+      --warn: #ffd36a;
+      --bad: #7f8797;
+      --shadow: 0 24px 70px rgba(0,0,0,.42);
+      --radius: 28px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(255,43,61,.32), transparent 32%),
+        radial-gradient(circle at 85% 0%, rgba(124,60,255,.34), transparent 36%),
+        radial-gradient(circle at 50% 100%, rgba(44,255,155,.13), transparent 32%),
+        #09090f;
+      overflow-x: hidden;
+    }
+
+    .app { width: min(100%, 560px); margin: 0 auto; min-height: 100svh; padding: 22px 16px calc(22px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; flex-direction: column; gap: 2px; }
+    .eyebrow { color: var(--muted); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(28px, 8vw, 44px); line-height: .95; letter-spacing: -.05em; }
+    .badge { padding: 9px 12px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); border-radius: 999px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .card { border: 1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.055)); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(16px); }
+    .login { padding: 18px; display: grid; gap: 12px; }
+    label { font-size: 13px; color: var(--muted); }
+    input { width: 100%; border: 1px solid rgba(255,255,255,.15); background: rgba(0,0,0,.28); color: var(--text); border-radius: 18px; padding: 15px 16px; outline: none; font-size: 17px; }
+    input:focus { border-color: rgba(255,43,61,.72); box-shadow: 0 0 0 4px rgba(255,43,61,.13); }
+    button { border: 0; color: var(--text); border-radius: 18px; padding: 15px 16px; font-weight: 800; font-size: 16px; cursor: pointer; touch-action: manipulation; }
+    .primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 16px 40px rgba(255,43,61,.22); }
+    .ghost { background: rgba(255,255,255,.1); color: var(--muted); }
+    .danger { background: rgba(255,43,61,.14); color: #ffb8be; border: 1px solid rgba(255,43,61,.24); }
+    .stats { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+    .stat { padding: 16px; min-height: 96px; display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-title { color: var(--muted); font-size: 13px; }
+    .score { font-size: 42px; font-weight: 950; letter-spacing: -.06em; }
+    .small-score { font-size: 25px; font-weight: 900; }
+    .game { padding: 18px; display: grid; gap: 16px; }
+    .cases { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .case { min-height: 190px; position: relative; overflow: hidden; background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.055)); border: 1px solid rgba(255,255,255,.12); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; transform: translateZ(0); }
+    .case::before { content: ""; position: absolute; inset: -40%; background: radial-gradient(circle, rgba(255,255,255,.22), transparent 35%); opacity: 0; transform: scale(.5); transition: .25s ease; }
+    .case:active::before { opacity: 1; transform: scale(1); }
+    .case-icon { width: 74px; height: 74px; border-radius: 22px; display: grid; place-items: center; font-size: 42px; background: linear-gradient(135deg, rgba(255,43,61,.26), rgba(124,60,255,.28)); border: 1px solid rgba(255,255,255,.16); box-shadow: inset 0 0 30px rgba(255,255,255,.06); }
+    .case-name { font-size: 18px; font-weight: 900; }
+    .case-sub { color: var(--muted); font-size: 12px; }
+    .result { min-height: 94px; padding: 16px; display: grid; gap: 5px; border-radius: 24px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.09); }
+    .result-title { font-size: 18px; font-weight: 900; }
+    .result-text { color: var(--muted); font-size: 14px; line-height: 1.35; }
+    .flash { animation: flash .45s ease both; }
+    @keyframes flash { 0% { transform: scale(.98); filter: brightness(1); } 45% { transform: scale(1.02); filter: brightness(1.28); } 100% { transform: scale(1); filter: brightness(1); } }
+    .history { padding: 16px; display: grid; gap: 10px; }
+    .history-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .history h2 { margin: 0; font-size: 18px; }
+    .list { display: grid; gap: 8px; max-height: 220px; overflow: auto; padding-right: 2px; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 11px 12px; border-radius: 16px; background: rgba(255,255,255,.07); color: var(--muted); font-size: 13px; }
+    .gain { font-weight: 900; color: var(--good); }
+    .zero { color: var(--bad); }
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hidden { display: none !important; }
+    .hint { color: var(--muted); font-size: 12px; line-height: 1.45; text-align: center; }
+    .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(140%); width: min(calc(100% - 28px), 520px); padding: 14px 16px; border-radius: 18px; background: rgba(10,10,18,.92); border: 1px solid rgba(255,255,255,.12); box-shadow: var(--shadow); color: var(--text); font-size: 14px; transition: .25s ease; z-index: 10; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    @media (max-width: 380px) { .case { min-height: 165px; } .score { font-size: 36px; } .controls { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <div class="brand">
+        <div class="eyebrow">random cases</div>
+        <h1>Игра<br>кейсов</h1>
+      </div>
+      <div class="badge" id="sessionBadge">гость</div>
+    </section>
+
+    <section class="card login" id="loginBox">
+      <label for="loginInput">Введи логин. Очки будут храниться за этим логином на этом устройстве.</label>
+      <input id="loginInput" autocomplete="username" inputmode="text" placeholder="например: dima" maxlength="32" />
+      <button class="primary" id="loginBtn">Войти в игру</button>
+      <div class="hint">Без сервера: прогресс сохраняется в памяти браузера телефона. Открыл снова с того же телефона — продолжаешь.</div>
+    </section>
+
+    <section id="gameBox" class="hidden">
+      <section class="stats">
+        <div class="card stat">
+          <div class="stat-title">Твой баланс</div>
+          <div><span class="score" id="score">0</span> очков</div>
+        </div>
+        <div class="card stat">
+          <div class="stat-title">Открыто</div>
+          <div><span class="small-score" id="opened">0</span> кейсов</div>
+        </div>
+      </section>
+
+      <section class="card game">
+        <div class="result" id="resultBox">
+          <div class="result-title">Выбери кейс</div>
+          <div class="result-text">В одном из двух кейсов может быть пусто, 50, 100 или 200 очков. Рандом холодный. Как город ночью.</div>
+        </div>
+        <div class="cases">
+          <button class="case" data-case="left" aria-label="Открыть левый кейс">
+            <div class="case-icon">◈</div>
+            <div class="case-name">Кейс 01</div>
+            <div class="case-sub">нажми</div>
+          </button>
+          <button class="case" data-case="right" aria-label="Открыть правый кейс">
+            <div class="case-icon">◆</div>
+            <div class="case-name">Кейс 02</div>
+            <div class="case-sub">нажми</div>
+          </button>
+        </div>
+      </section>
+
+      <section class="card history">
+        <div class="history-head">
+          <h2>История</h2>
+          <span class="badge" id="loginLabel"></span>
+        </div>
+        <div class="list" id="historyList"></div>
+        <div class="controls">
+          <button class="ghost" id="logoutBtn">Сменить логин</button>
+          <button class="danger" id="resetBtn">Сбросить очки</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'case-points-game-v1';
+    const REWARDS = [0, 50, 100, 200];
+    const state = { currentLogin: '', players: {} };
+
+    const $ = (id) => document.getElementById(id);
+    const loginBox = $('loginBox');
+    const gameBox = $('gameBox');
+    const loginInput = $('loginInput');
+    const loginBtn = $('loginBtn');
+    const score = $('score');
+    const opened = $('opened');
+    const resultBox = $('resultBox');
+    const historyList = $('historyList');
+    const sessionBadge = $('sessionBadge');
+    const loginLabel = $('loginLabel');
+    const toast = $('toast');
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        state.currentLogin = saved.currentLogin || '';
+        state.players = saved.players || {};
+      } catch (error) {
+        console.warn('Storage load error', error);
+      }
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function normalizeLogin(value) {
+      return String(value || '').trim().replace(/\s+/g, '_').toLowerCase();
+    }
+
+    function ensurePlayer(login) {
+      if (!state.players[login]) {
+        state.players[login] = { score: 0, opened: 0, history: [] };
+      }
+      return state.players[login];
+    }
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    function setScreen() {
+      if (state.currentLogin) {
+        loginBox.classList.add('hidden');
+        gameBox.classList.remove('hidden');
+      } else {
+        loginBox.classList.remove('hidden');
+        gameBox.classList.add('hidden');
+      }
+      render();
+    }
+
+    function render() {
+      const login = state.currentLogin;
+      sessionBadge.textContent = login ? '@' + login : 'гость';
+      loginLabel.textContent = login ? '@' + login : '';
+      if (!login) return;
+
+      const player = ensurePlayer(login);
+      score.textContent = player.score;
+      opened.textContent = player.opened;
+
+      if (!player.history.length) {
+        historyList.innerHTML = '<div class="row"><span>Пока пусто. Первый кейс ждёт.</span><span class="zero">0</span></div>';
+        return;
+      }
+
+      historyList.innerHTML = player.history.slice(0, 20).map(item => {
+        const cls = item.points > 0 ? 'gain' : 'zero';
+        const sign = item.points > 0 ? '+' : '';
+        return `<div class="row"><span>${item.time} · ${item.caseName}</span><span class="${cls}">${sign}${item.points}</span></div>`;
+      }).join('');
+    }
+
+    function login() {
+      const login = normalizeLogin(loginInput.value);
+      if (login.length < 2) {
+        showToast('Логин слишком короткий. Минимум 2 символа.');
+        return;
+      }
+      state.currentLogin = login;
+      ensurePlayer(login);
+      save();
+      resultBox.classList.remove('flash');
+      setScreen();
+      showToast('Вход выполнен: @' + login);
+    }
+
+    function openCase(caseSide) {
+      const login = state.currentLogin;
+      if (!login) return;
+      const player = ensurePlayer(login);
+      const points = REWARDS[Math.floor(Math.random() * REWARDS.length)];
+      const caseName = caseSide === 'left' ? 'Кейс 01' : 'Кейс 02';
+      const time = new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+      player.score += points;
+      player.opened += 1;
+      player.history.unshift({ caseName, points, time });
+      player.history = player.history.slice(0, 50);
+      save();
+
+      resultBox.classList.remove('flash');
+      void resultBox.offsetWidth;
+      resultBox.classList.add('flash');
+
+      if (points === 0) {
+        resultBox.innerHTML = '<div class="result-title">Пусто</div><div class="result-text">Кейс был холодный. Очки не добавлены. Баланс сохранён.</div>';
+      } else {
+        resultBox.innerHTML = `<div class="result-title">+${points} очков</div><div class="result-text">${caseName} сработал. Очки записаны на логин @${login}.</div>`;
+      }
+      render();
+    }
+
+    function logout() {
+      state.currentLogin = '';
+      save();
+      setScreen();
+      showToast('Логин сменён.');
+    }
+
+    function resetCurrent() {
+      const login = state.currentLogin;
+      if (!login) return;
+      state.players[login] = { score: 0, opened: 0, history: [] };
+      save();
+      resultBox.innerHTML = '<div class="result-title">Сброшено</div><div class="result-text">Очки текущего логина очищены. Можно начинать заново.</div>';
+      render();
+      showToast('Очки сброшены для @' + login);
+    }
+
+    loginBtn.addEventListener('click', login);
+    loginInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
+    document.querySelectorAll('.case').forEach(btn => btn.addEventListener('click', () => openCase(btn.dataset.case)));
+    $('logoutBtn').addEventListener('click', logout);
+    $('resetBtn').addEventListener('click', resetCurrent);
+
+    load();
+    setScreen();
+  </script>
+</body>
+</html>
