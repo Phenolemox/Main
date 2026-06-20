@@ -6,7 +6,12 @@ log(){ printf '\n===== %s =====\n' "$1"; }
 DEVROOT="/opt/devtools"
 PYVENV="$DEVROOT/python-qa"
 BIN="$HOME/bin"
-mkdir -p "$DEVROOT" "$BIN" /opt/data/ai-control-room/server
+
+# /opt is root-owned on clean Ubuntu. Create root path with sudo, then hand this devtools subtree to admin.
+mkdir -p "$BIN"
+sudo mkdir -p "$DEVROOT" /opt/data/ai-control-room/server
+sudo chown -R "$(whoami):$(id -gn)" "$DEVROOT"
+sudo chown -R "$(whoami):$(id -gn)" /opt/data/ai-control-room/server
 
 log "SERVER DEVTOOLS STAGE 1"
 echo "host=$(hostname) user=$(whoami) time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -112,15 +117,16 @@ ENV="/opt/apps/poker-bot/.env"
 TOKEN="$(grep '^TELEGRAM_BOT_TOKEN=' "$ENV" | cut -d= -f2-)"
 if [ -z "$TOKEN" ]; then echo "TELEGRAM_TOKEN_MISSING"; exit 1; fi
 python3 - <<'PY'
-import json, os, urllib.request
+import json, urllib.request
 from pathlib import Path
 
 env = {}
 for line in Path('/opt/apps/poker-bot/.env').read_text().splitlines():
     if '=' in line and not line.strip().startswith('#'):
-        k,v = line.split('=',1); env[k]=v
-TOKEN = env.get('TELEGRAM_BOT_TOKEN','')
-for method in ['getMe','getWebhookInfo']:
+        k, v = line.split('=', 1)
+        env[k] = v
+TOKEN = env.get('TELEGRAM_BOT_TOKEN', '')
+for method in ['getMe', 'getWebhookInfo']:
     with urllib.request.urlopen(f'https://api.telegram.org/bot{TOKEN}/{method}', timeout=10) as r:
         data = json.loads(r.read().decode())
     if method == 'getMe':
@@ -128,7 +134,7 @@ for method in ['getMe','getWebhookInfo']:
         print('GETME_OK:', data.get('ok'), 'username=', result.get('username'), 'id=', result.get('id'))
     else:
         result = data.get('result', {})
-        safe = {k: result.get(k) for k in ['url','has_custom_certificate','pending_update_count','last_error_date','last_error_message','max_connections']}
+        safe = {k: result.get(k) for k in ['url', 'has_custom_certificate', 'pending_update_count', 'last_error_date', 'last_error_message', 'max_connections']}
         print('WEBHOOK_INFO:', json.dumps(safe, ensure_ascii=False))
 PY
 echo "TELEGRAM_BOT_CHECK_DONE"
@@ -144,22 +150,23 @@ from pathlib import Path
 env = {}
 for line in Path('/opt/apps/poker-bot/.env').read_text().splitlines():
     if '=' in line and not line.strip().startswith('#'):
-        k,v = line.split('=',1); env[k]=v
-TOKEN = env.get('TELEGRAM_BOT_TOKEN','')
+        k, v = line.split('=', 1)
+        env[k] = v
+TOKEN = env.get('TELEGRAM_BOT_TOKEN', '')
 if not TOKEN:
     raise SystemExit('TELEGRAM_TOKEN_MISSING')
 commands = [
-    {'command':'start','description':'открыть меню'},
-    {'command':'cards','description':'раздача с обменом'},
-    {'command':'topscore','description':'рейтинг игры'},
-    {'command':'topduel','description':'рейтинг дуэлей'},
-    {'command':'profile','description':'профиль игрока'},
-    {'command':'nick','description':'сменить игровой ник'},
-    {'command':'duel','description':'вызвать игрока на дуэль в группе'},
-    {'command':'help','description':'правила и помощь'},
+    {'command': 'start', 'description': 'открыть меню'},
+    {'command': 'cards', 'description': 'раздача с обменом'},
+    {'command': 'topscore', 'description': 'рейтинг игры'},
+    {'command': 'topduel', 'description': 'рейтинг дуэлей'},
+    {'command': 'profile', 'description': 'профиль игрока'},
+    {'command': 'nick', 'description': 'сменить игровой ник'},
+    {'command': 'duel', 'description': 'вызвать игрока на дуэль в группе'},
+    {'command': 'help', 'description': 'правила и помощь'},
 ]
 body = json.dumps({'commands': commands}).encode()
-req = urllib.request.Request(f'https://api.telegram.org/bot{TOKEN}/setMyCommands', data=body, headers={'Content-Type':'application/json'})
+req = urllib.request.Request(f'https://api.telegram.org/bot{TOKEN}/setMyCommands', data=body, headers={'Content-Type': 'application/json'})
 with urllib.request.urlopen(req, timeout=10) as r:
     data = json.loads(r.read().decode())
 print('SET_COMMANDS_OK:', data.get('ok'))
