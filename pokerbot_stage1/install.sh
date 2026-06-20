@@ -21,10 +21,28 @@ git remote remove origin 2>/dev/null || true
 git remote add origin "https://github.com/${TARGET_REPO}.git"
 git branch -M main
 
-rsync -a --delete \
-  --exclude '.git' \
-  --exclude '.venv' \
-  "$TMP_DIR/pokerbot_stage1/repo/" "$TARGET_DIR/"
+python3 - <<'PY'
+from pathlib import Path
+import shutil
+
+src = Path('/tmp/pokerbot_stage1_main/pokerbot_stage1/repo')
+dst = Path('/opt/repos/poker-bot')
+
+for item in dst.iterdir():
+    if item.name in {'.git', '.venv'}:
+        continue
+    if item.is_dir():
+        shutil.rmtree(item)
+    else:
+        item.unlink()
+
+for item in src.iterdir():
+    target = dst / item.name
+    if item.is_dir():
+        shutil.copytree(item, target)
+    else:
+        shutil.copy2(item, target)
+PY
 
 python3 -m venv .venv
 ./.venv/bin/python -m pip install --upgrade pip
