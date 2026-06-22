@@ -15,9 +15,10 @@ Poker-bot is one managed project on the AI server. It is not the server itself.
 
 ## Current Version
 
-- Commit: `93d1f8f Expand poker admin API`
+- Commit: `9cdfb0f Add durable attempt ledger admin API`
 - Telegram username: `mypokerbotofficial_bot`
 - Telegram mode: polling
+- Attempts: durable `attempt_ledger` in SQLite, with private/chat daily scopes.
 
 ## V3 Code Structure
 
@@ -67,15 +68,17 @@ Protected by `X-Admin-Token` when `ADMIN_TOKEN` is configured:
 - `GET /admin/audit`
 - `POST /admin/score/adjust`
 - `POST /admin/score/reset`
+- `GET /admin/attempts`
+- `POST /admin/attempts/grant`
+- `POST /admin/attempts/reset`
 - `PATCH /admin/users/{user_id}/block`
 - `PUT /admin/settings/{key}`
 
-Control Room uses these endpoints through server-side `POKER_ADMIN_TOKEN`.
+Control Room uses these endpoints through server-side `POKER_ADMIN_TOKEN`. The browser never receives `POKER_ADMIN_TOKEN`.
 
 ## Product Next Steps
 
 - Add a real Mini App frontend and set `TELEGRAM_MINI_APP_URL`.
 - Add MAX adapter and set `MAX_APP_URL`.
-- Add durable attempts accounting and expose it in Admin API.
 - Add PostgreSQL migration before broad launch.
 - Add screenshot-based UX regression checklist.

@@ -32,14 +32,15 @@ Updated from live SSH and API checks on 2026-06-22.
 - Service: `poker-bot.service`
 - Repo: `/opt/repos/poker-bot`
 - App: `/opt/apps/poker-bot`
-- Current commit: `93d1f8f Expand poker admin API`
+- Current commit: `9cdfb0f Add durable attempt ledger admin API`
 - Health: OK
 - Ready: OK
 - Telegram polling: active
 - Telegram bot username: `mypokerbotofficial_bot`
 - Telegram commands: updated after Stage26
 - QA: `poker-qa` OK, `12 passed`
-- Admin API: active with `ADMIN_TOKEN`; supports users with scores, chats, settings, leaderboards, audit, score adjust, score reset and block/unblock.
+- Admin API: active with `ADMIN_TOKEN`; supports users with scores and today's attempts, chats, settings, leaderboards, audit, score adjust, score reset, attempts grant/reset and block/unblock.
+- Attempts accounting: durable `attempt_ledger` table. `/cards` consumes attempts in SQLite; Redis remains for live game sessions.
 
 ## Dedicated Redis For Poker Bot
 
@@ -57,7 +58,7 @@ Updated from live SSH and API checks on 2026-06-22.
 ## Current Yellow Points
 
 - Public domain/TLS routing is not finalized.
-- Control-room Stage2 is live with bot registry and Poker Admin drill-down. Public routing, login UX, attempts management, MAX adapter and production DB migration are not finished.
+- Control-room Stage3 is live with bot registry and Poker Admin drill-down. Public routing, login UX, MAX adapter and production DB migration are not finished.
 - Control-room write actions are enabled; `CONTROL_ROOM_TOKEN` is configured server-side in `/opt/apps/ai-control-room/.env` and must not be committed.
 - Control-room has `POKER_ADMIN_TOKEN` configured server-side from `/opt/apps/poker-bot/.env`; it must not be committed.
 - MCP bridge is active, but its HTTP health check needs a documented endpoint or command-level check.

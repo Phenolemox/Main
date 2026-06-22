@@ -176,22 +176,41 @@ function renderPokerAdmin(data) {
     metric("Users", summary.users ?? 0, true),
     metric("Chats", summary.chats ?? 0, true),
     metric("Scores", summary.score_entries ?? 0, true),
+    metric("Attempts", summary.attempt_entries ?? 0, true),
     metric("Sessions", sessionCount(data.sessions), true),
   ].join("");
 
   const users = data.users?.items || [];
   $("pokerUsers").innerHTML = `
-    <thead><tr><th>ID</th><th>User</th><th>Scores</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>ID</th><th>User</th><th>Scores</th><th>Attempts</th><th>Status</th><th></th></tr></thead>
     <tbody>
       ${users.map((u) => `
         <tr>
           <td>${esc(u.id)}</td>
           <td><strong>${esc(u.display_name || u.username || "user")}</strong><div class="muted">@${esc(u.username || "-")}</div></td>
           <td>G ${esc(u.scores?.global || 0)} / D ${esc(u.scores?.duel || 0)} / C ${esc(u.scores?.chat || 0)}</td>
+          <td>${esc(u.attempts_today?.used || 0)} / ${esc(u.attempts_today?.limit || 0)} <div class="muted">+${esc(u.attempts_today?.granted || 0)} granted</div></td>
           <td>${pill(!u.is_blocked, u.is_blocked ? "blocked" : "active")}</td>
           <td><button data-block-user="${esc(u.id)}" data-block-state="${u.is_blocked ? "false" : "true"}">${u.is_blocked ? "Unblock" : "Block"}</button></td>
         </tr>
       `).join("")}
+    </tbody>
+  `;
+
+  const attempts = data.attempts?.items || [];
+  $("pokerAttempts").innerHTML = `
+    <thead><tr><th>Day</th><th>User</th><th>Scope</th><th>Used</th><th>Remaining</th><th>Chat</th></tr></thead>
+    <tbody>
+      ${attempts.length ? attempts.map((item) => `
+        <tr>
+          <td>${esc(item.day)}</td>
+          <td><strong>#${esc(item.user_id)}</strong><div class="muted">${esc(item.display_name || item.username || "user")}</div></td>
+          <td>${esc(item.scope)}</td>
+          <td>${esc(item.used)} / ${esc(item.limit)} <div class="muted">+${esc(item.granted)} granted</div></td>
+          <td>${esc(item.remaining)}</td>
+          <td>${item.chat_id ? `#${esc(item.chat_id)} <div class="muted">${esc(item.chat_title || "")}</div>` : `<span class="muted">private</span>`}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="6" class="muted">No attempts for ${esc(data.attempts?.day || "today")}.</td></tr>`}
     </tbody>
   `;
 
@@ -275,6 +294,42 @@ async function submitScoreReset() {
   await loadPokerAdmin();
 }
 
+async function submitAttemptsGrant() {
+  const payload = {
+    user_id: Number($("attemptGrantUserId").value),
+    amount: Number($("attemptGrantAmount").value || 1),
+    scope: $("attemptGrantScope").value,
+    reason: $("attemptGrantReason").value || "control_room_attempt_grant",
+  };
+  if ($("attemptGrantChatId").value) payload.chat_id = Number($("attemptGrantChatId").value);
+  if ($("attemptGrantDay").value) payload.day = $("attemptGrantDay").value.trim();
+  const result = await fetchJson("/api/poker-admin/attempts-grant", {
+    method: "POST",
+    headers: tokenHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
+}
+
+async function submitAttemptsReset() {
+  if (!confirm("Reset selected poker attempt ledger entries for the selected day?")) return;
+  const payload = {
+    reason: $("attemptResetReason").value || "control_room_attempt_reset",
+  };
+  if ($("attemptResetScope").value) payload.scope = $("attemptResetScope").value;
+  if ($("attemptResetUserId").value) payload.user_id = Number($("attemptResetUserId").value);
+  if ($("attemptResetChatId").value) payload.chat_id = Number($("attemptResetChatId").value);
+  if ($("attemptResetDay").value) payload.day = $("attemptResetDay").value.trim();
+  const result = await fetchJson("/api/poker-admin/attempts-reset", {
+    method: "POST",
+    headers: tokenHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
+}
+
 async function saveSetting(key) {
   const textarea = $(settingId(key));
   let value;
@@ -320,6 +375,12 @@ $("adjustScore").addEventListener("click", () => submitScoreAdjust().catch((err)
   $("pokerAdminOutput").textContent = String(err);
 }));
 $("resetScores").addEventListener("click", () => submitScoreReset().catch((err) => {
+  $("pokerAdminOutput").textContent = String(err);
+}));
+$("grantAttempts").addEventListener("click", () => submitAttemptsGrant().catch((err) => {
+  $("pokerAdminOutput").textContent = String(err);
+}));
+$("resetAttempts").addEventListener("click", () => submitAttemptsReset().catch((err) => {
   $("pokerAdminOutput").textContent = String(err);
 }));
 

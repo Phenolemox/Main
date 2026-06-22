@@ -114,6 +114,36 @@
             <button id="resetScores">Reset</button>
           </div>
         </div>
+        <div>
+          <h3>Attempts Grant</h3>
+          <div class="form-grid">
+            <input id="attemptGrantUserId" type="number" min="1" placeholder="User ID">
+            <input id="attemptGrantAmount" type="number" min="1" max="10000" value="1" placeholder="Amount">
+            <select id="attemptGrantScope">
+              <option value="private">private</option>
+              <option value="chat">chat</option>
+            </select>
+            <input id="attemptGrantChatId" type="number" min="1" placeholder="Chat ID for chat">
+            <input id="attemptGrantDay" placeholder="YYYY-MM-DD optional">
+            <input id="attemptGrantReason" placeholder="Reason" value="control_room_attempt_grant">
+            <button id="grantAttempts">Grant</button>
+          </div>
+        </div>
+        <div>
+          <h3>Attempts Reset</h3>
+          <div class="form-grid">
+            <select id="attemptResetScope">
+              <option value="">all attempt scopes</option>
+              <option value="private">private</option>
+              <option value="chat">chat</option>
+            </select>
+            <input id="attemptResetUserId" type="number" min="1" placeholder="User ID optional">
+            <input id="attemptResetChatId" type="number" min="1" placeholder="Chat ID optional">
+            <input id="attemptResetDay" placeholder="YYYY-MM-DD default today">
+            <input id="attemptResetReason" placeholder="Reason" value="control_room_attempt_reset">
+            <button id="resetAttempts">Reset Attempts</button>
+          </div>
+        </div>
       </div>
       <div class="status-strip compact" id="pokerAdminSummary"></div>
       <div class="grid two">
@@ -122,11 +152,15 @@
           <div class="table-wrap"><table id="pokerUsers"></table></div>
         </div>
         <div class="admin-block">
-          <div class="panel-head"><h3>Leaderboards</h3></div>
-          <div id="pokerLeaderboards" class="stack"></div>
+          <div class="panel-head"><h3>Attempts Today</h3></div>
+          <div class="table-wrap"><table id="pokerAttempts"></table></div>
         </div>
       </div>
       <div class="grid two">
+        <div class="admin-block">
+          <div class="panel-head"><h3>Leaderboards</h3></div>
+          <div id="pokerLeaderboards" class="stack"></div>
+        </div>
         <div class="admin-block">
           <div class="panel-head"><h3>Settings</h3></div>
           <div id="pokerSettings" class="stack"></div>

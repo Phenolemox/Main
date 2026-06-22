@@ -46,11 +46,11 @@ Then visit `http://127.0.0.1:8150`. Read-only server status works without a toke
 
 ## Current Poker Bot State
 
-- Latest deployed commit: `93d1f8f Expand poker admin API`
+- Latest deployed commit: `9cdfb0f Add durable attempt ledger admin API`
 - QA: `py_compile` OK, `pytest` OK, `12 passed`
 - Telegram bot: `mypokerbotofficial_bot`
 - Telegram polling: active
-- Admin API: summary, users with scores, chats, settings, leaderboards, audit, score adjust, score reset and block/unblock
+- Admin API: summary, users with scores and daily attempts, chats, settings, leaderboards, audit, score adjust, score reset, attempts grant/reset and block/unblock
 - Redis sessions: active
 
 ## Current Structure

@@ -370,6 +370,7 @@ def poker_admin(x_control_room_token: str | None = Header(default=None)):
         "chats": poker_admin_request("/admin/chats"),
         "settings": poker_admin_request("/admin/settings"),
         "leaderboards": poker_admin_request("/admin/leaderboards"),
+        "attempts": poker_admin_request("/admin/attempts"),
         "audit": poker_admin_request("/admin/audit?limit=30"),
         "sessions": read_url(f"{POKER_ADMIN_BASE_URL}/ops/sessions"),
     }
@@ -385,6 +386,18 @@ def poker_score_adjust(payload: dict[str, Any], x_control_room_token: str | None
 def poker_score_reset(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
     require_action_token(x_control_room_token)
     return poker_admin_request("/admin/score/reset", method="POST", payload=payload)
+
+
+@app.post("/api/poker-admin/attempts-grant")
+def poker_attempts_grant(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request("/admin/attempts/grant", method="POST", payload=payload)
+
+
+@app.post("/api/poker-admin/attempts-reset")
+def poker_attempts_reset(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request("/admin/attempts/reset", method="POST", payload=payload)
 
 
 @app.patch("/api/poker-admin/users/{user_id}/block")

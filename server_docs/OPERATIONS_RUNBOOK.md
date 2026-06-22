@@ -102,6 +102,20 @@ with urlopen(req, timeout=20) as response:
 PY
 ```
 
+Direct poker Admin API attempts check without printing tokens:
+
+```bash
+ADMIN_TOKEN=$(grep -E '^ADMIN_TOKEN=' /opt/apps/poker-bot/.env | cut -d= -f2-)
+curl -fsS -H "X-Admin-Token: $ADMIN_TOKEN" http://10.8.0.1:8140/admin/summary | jq '{users, chats, score_entries, attempt_entries}'
+curl -fsS -H "X-Admin-Token: $ADMIN_TOKEN" http://10.8.0.1:8140/admin/attempts | jq '{day, items_count:(.items|length)}'
+unset ADMIN_TOKEN
+```
+
+Attempts write operations are available through Control Room and the bot Admin API:
+
+- `POST /admin/attempts/grant`: grant extra private or chat attempts for a user/day.
+- `POST /admin/attempts/reset`: delete selected attempt ledger rows for the selected day; default day is today.
+
 ## GitHub Sync
 
 ```bash
