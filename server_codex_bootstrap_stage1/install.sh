@@ -206,7 +206,11 @@ ensure_repo() {
     git -C "$path" config pull.ff only || true
     return 0
   fi
-  rm -rf "$path"
+  if [ -e "$path" ]; then
+    backup="${path}.bak.$(date -u +%Y%m%d-%H%M%S)"
+    mv "$path" "$backup"
+    echo "MOVED_NON_GIT_PATH_TO=$backup"
+  fi
   if command -v gh >/dev/null 2>&1; then
     gh repo clone "$repo" "$path" && return 0
   fi
