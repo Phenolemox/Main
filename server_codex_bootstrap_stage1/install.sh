@@ -96,9 +96,21 @@ echo "AI_STAGE_URL=$AI_STAGE_URL"
 echo "AI_STAGE_LOG=$AI_STAGE_LOG"
 
 if printf '%s' "$url" | grep -Eq '^https?://'; then
-  curl -fsSL "$url" -o "$tmp"
+  if ! curl -fsSL "$url" -o "$tmp"; then
+    status=$?
+    echo "AI_STAGE_DOWNLOAD_FAIL=$status"
+    echo "AI_STAGE_EXIT=$status"
+    echo "AI_STAGE_LOG=$log"
+    exit "$status"
+  fi
 else
-  cp "$url" "$tmp"
+  if ! cp "$url" "$tmp"; then
+    status=$?
+    echo "AI_STAGE_COPY_FAIL=$status"
+    echo "AI_STAGE_EXIT=$status"
+    echo "AI_STAGE_LOG=$log"
+    exit "$status"
+  fi
 fi
 sed -i 's/\r$//' "$tmp"
 chmod 700 "$tmp"
