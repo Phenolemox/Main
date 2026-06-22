@@ -27,6 +27,16 @@ The server is healthy and has enough capacity for the poker bot plus additional 
 - `zabbix-agent.service`: active
 - Netdata: active on `10.8.0.1:19999`, no warning or critical alarms at audit time
 
+Observed control panels:
+
+- Homepage Dashboard: `http://10.8.0.1:3010`
+- Gatus monitor: `http://10.8.0.1:3001`
+- Code Server: `http://10.8.0.1:8080`
+- Adminer: `http://10.8.0.1:8081`
+- Dozzle: `http://10.8.0.1:8082`
+- Portainer: `https://10.8.0.1:9443`
+- Netdata: `http://10.8.0.1:19999`
+
 ## App And Repo Layout
 
 Active paths:
@@ -76,7 +86,7 @@ Next improvement: add a manifest with checksums and explicit included/excluded p
 
 ## Issues To Fix Next
 
-- Build real web admin/control-room UI over `ai-agent-api`, Netdata and project metadata.
+- Build real custom web admin/control-room UI over `ai-agent-api`, Netdata and project metadata. Homepage/Gatus/Dozzle already exist and should be linked, not duplicated.
 - Add domain/TLS routing for public sites, Mini Apps and admin panels.
 - Add explicit bot registry so poker-bot becomes one managed service among many.
 - Add production database plan: keep SQLite only for small/internal stage, move high-traffic bot data to PostgreSQL.

@@ -41,6 +41,8 @@ The control room should show:
 - bot registry;
 - drill-down admin pages for each bot.
 
+The server already has generic panels: Homepage, Gatus, Netdata, Dozzle, Adminer, Portainer and Code Server. The custom control-room UI should sit above them as the product cockpit and link into those tools where they are stronger.
+
 For poker-bot, the drill-down admin should manage:
 
 - rules and score tables;
