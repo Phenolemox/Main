@@ -216,6 +216,7 @@ ensure_repo() {
     git -C "$path" fetch origin main --quiet || true
     git -C "$path" checkout main >/dev/null 2>&1 || true
     git -C "$path" config pull.ff only || true
+    git -C "$path" pull --ff-only origin main --quiet || true
     return 0
   fi
   if [ -e "$path" ]; then
