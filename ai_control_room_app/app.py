@@ -381,7 +381,12 @@ def auth_login(payload: dict[str, Any], response: Response):
         samesite="strict",
         path="/",
     )
-    return {"ok": True, "session_ttl_seconds": SESSION_TTL_SECONDS}
+    return {
+        "ok": True,
+        "authenticated": True,
+        "ttl_seconds": SESSION_TTL_SECONDS,
+        "session_ttl_seconds": SESSION_TTL_SECONDS,
+    }
 
 
 @app.post("/api/auth/logout")
