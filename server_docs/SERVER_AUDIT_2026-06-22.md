@@ -68,7 +68,11 @@ Observed timers:
 - `server-health-check.timer`: frequent health check
 - standard Ubuntu timers for apt, logrotate, fstrim and package db backup
 
-Next improvement: add a single `ai-backup-now` command that writes a manifest with checksums and lists included/excluded paths.
+Manual backup verified:
+
+- `/opt/backups/ai-server-backup-2026-06-22_11-04-59.tar.gz`
+
+Next improvement: add a manifest with checksums and explicit included/excluded paths.
 
 ## Issues To Fix Next
 

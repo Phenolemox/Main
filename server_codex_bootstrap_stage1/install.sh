@@ -427,7 +427,10 @@ else
 fi
 echo
 echo "----- newest backup files -----"
-find /opt/backups -maxdepth 4 -type f -ls 2>/dev/null | sort -k11 | tail -40
+find /opt/backups -maxdepth 4 -type f -printf '%T@ %TY-%Tm-%Td_%TH:%TM %s %p\n' 2>/dev/null |
+  sort -n |
+  tail -40 |
+  cut -d' ' -f2-
 echo "AI_BACKUP_NOW_DONE"
 SH
 

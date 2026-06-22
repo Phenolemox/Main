@@ -44,6 +44,7 @@ Updated from live SSH and API checks on 2026-06-22.
 - Current poker bot DB: SQLite in the deployed app directory
 - Backups root: `/opt/backups`
 - Server backup timer: `ai-server-backup.timer`, daily at 04:30 UTC
+- Manual backup verified: `/opt/backups/ai-server-backup-2026-06-22_11-04-59.tar.gz`
 
 ## Current Yellow Points
 
