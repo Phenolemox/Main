@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Control Room</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">AI Server</p>
+      <h1>Control Room</h1>
+    </div>
+    <div class="toolbar">
+      <input id="token" type="password" placeholder="Control token" autocomplete="off">
+      <button id="refresh" title="Refresh">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="status-strip" id="statusStrip"></section>
+
+    <section class="grid two">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Server</h2>
+          <span id="generatedAt"></span>
+        </div>
+        <pre id="serverState" class="terminal"></pre>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Actions</h2>
+          <span id="actionState"></span>
+        </div>
+        <div class="actions">
+          <button data-action="backup" title="Run server backup">Backup</button>
+          <button data-action="telegram-set-commands" title="Update Telegram commands">Telegram Commands</button>
+          <button data-action="poker-reset-sessions" title="Clear poker sessions">Reset Sessions</button>
+          <button data-action="poker-qa" title="Run poker QA">Poker QA</button>
+        </div>
+        <pre id="actionOutput" class="terminal small"></pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Managed Services</h2>
+        <span id="serviceCount"></span>
+      </div>
+      <div class="cards" id="services"></div>
+    </section>
+
+    <section class="grid two">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>GitHub Sync</h2>
+        </div>
+        <div id="projects" class="stack"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Poker Bot</h2>
+        </div>
+        <div id="poker" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="grid two">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Panels</h2>
+        </div>
+        <div class="links" id="panels"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Backups</h2>
+        </div>
+        <div id="backups" class="stack"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Ports</h2>
+      </div>
+      <pre id="ports" class="terminal"></pre>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
