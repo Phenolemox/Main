@@ -351,6 +351,73 @@ print("SESSION_RESET=" + str(len(keys)))
 PY
 SH
 
+cat > "$BIN/bots-list" <<'SH'
+#!/usr/bin/env bash
+set +e
+echo "===== BOTS AND APPS ====="
+echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo
+echo "----- systemd candidates -----"
+systemctl list-units --type=service --all --no-pager |
+  awk '/bot|api|site|mcp|control-room|redis/ {print $1, $3, $4, substr($0, index($0,$5))}' |
+  sed -n '1,160p'
+echo
+echo "----- /opt/apps -----"
+find /opt/apps -maxdepth 2 -type d -name .git -prune -o -maxdepth 1 -mindepth 1 -type d -printf '%f\n' 2>/dev/null | sort
+echo
+echo "----- listening app ports -----"
+ss -ltnp 2>/dev/null | awk '/10\.8\.0\.1/ {print}' | sed -n '1,120p'
+echo
+echo "----- known health endpoints -----"
+for url in \
+  http://10.8.0.1:8130/health \
+  http://10.8.0.1:8140/health \
+  http://10.8.0.1:19999/api/v1/info
+do
+  printf '%s ' "$url"
+  curl -s --max-time 5 "$url" | head -c 180
+  echo
+done
+echo "BOTS_LIST_DONE"
+SH
+
+cat > "$BIN/ai-mcp-check" <<'SH'
+#!/usr/bin/env bash
+set +e
+echo "===== AI MCP CHECK ====="
+echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+systemctl is-active ai-mcp-bridge.service 2>/dev/null
+systemctl --no-pager --full status ai-mcp-bridge.service 2>/dev/null | sed -n '1,30p'
+echo
+echo "----- bridge files -----"
+find /opt/apps/ai-mcp-bridge -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
+echo
+echo "----- port -----"
+ss -ltnp 2>/dev/null | grep ':8131' || true
+echo
+echo "----- agent api health through direct API -----"
+curl -s --max-time 5 http://10.8.0.1:8130/health
+echo
+echo "AI_MCP_CHECK_DONE"
+SH
+
+cat > "$BIN/ai-backup-now" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "===== AI BACKUP NOW ====="
+echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+if [ -x /opt/scripts/backup-ai-server.sh ]; then
+  sudo /opt/scripts/backup-ai-server.sh
+else
+  echo "BACKUP_SCRIPT_MISSING=/opt/scripts/backup-ai-server.sh"
+  exit 1
+fi
+echo
+echo "----- newest backup files -----"
+find /opt/backups -maxdepth 4 -type f -ls 2>/dev/null | sort -k11 | tail -40
+echo "AI_BACKUP_NOW_DONE"
+SH
+
 cat > "$BIN/telegram-bot-check" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -437,6 +504,7 @@ chmod 700 \
   "$BIN/ai-stage" "$BIN/ai-tail" "$BIN/server-quick" "$BIN/ai-repo-check" \
   "$BIN/ai-ensure-repos" "$BIN/ai-sync-check" "$BIN/poker-qa" \
   "$BIN/poker-deploy" "$BIN/poker-stage26" "$BIN/poker-reset-sessions" \
+  "$BIN/bots-list" "$BIN/ai-mcp-check" "$BIN/ai-backup-now" \
   "$BIN/telegram-bot-check" "$BIN/telegram-set-commands"
 
 grep -qxF 'export PATH="$HOME/bin:$PATH"' "$HOME/.bashrc" || echo 'export PATH="$HOME/bin:$PATH"' >> "$HOME/.bashrc"
@@ -455,6 +523,9 @@ Installed commands:
 - `poker-deploy` - deploy `Phenolemox/poker-bot`.
 - `poker-stage26` - install the current v3 poker bot stage.
 - `poker-reset-sessions` - clear live Redis poker sessions.
+- `bots-list` - list managed bot/app/service candidates.
+- `ai-mcp-check` - check the MCP bridge service and port.
+- `ai-backup-now` - run the server backup script and list newest backup files.
 - `telegram-bot-check` and `telegram-set-commands`.
 MD
 
