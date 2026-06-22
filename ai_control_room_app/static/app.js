@@ -24,10 +24,31 @@ function bytes(value) {
   return `${n.toFixed(i ? 1 : 0)} ${units[i]}`;
 }
 
+function tokenHeaders(json = false) {
+  const token = $("token").value.trim();
+  const headers = token ? {"X-Control-Room-Token": token} : {};
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, options);
+  const text = await res.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch (_err) {
+    body = text;
+  }
+  if (!res.ok) {
+    const detail = typeof body === "object" ? JSON.stringify(body, null, 2) : body;
+    throw new Error(`${res.status} ${detail}`);
+  }
+  return body;
+}
+
 async function loadSummary() {
-  const res = await fetch("/api/summary");
-  if (!res.ok) throw new Error(`summary ${res.status}`);
-  const data = await res.json();
+  const data = await fetchJson("/api/summary");
   render(data);
 }
 
@@ -36,6 +57,9 @@ function render(data) {
   $("actionState").innerHTML = data.write_actions_configured
     ? pill(true, "write actions ready")
     : pill(false, "token not configured");
+  $("pokerAdminState").innerHTML = data.poker_admin_configured
+    ? pill(true, "poker admin ready")
+    : pill(false, "poker token missing");
 
   const healthOk = data.health.filter((h) => h.result.ok).length;
   const servicesOk = data.services.filter((s) => s.ok).length;
@@ -85,10 +109,21 @@ function render(data) {
       </div>
     `).join("");
 
+  const bots = data.bots || [];
+  $("botCount").textContent = `${bots.length} registered`;
+  $("bots").innerHTML = bots.map((bot) => `
+    <div class="card">
+      <div>${esc(bot.name)}</div>
+      <p class="muted">${esc(bot.repo)}</p>
+      <p>${pill(bot.admin_api_configured, bot.admin_api_configured ? "admin connected" : "admin token missing")}</p>
+      <p class="muted">${esc(bot.api)}</p>
+    </div>
+  `).join("");
+
   $("panels").innerHTML = data.panels.map((p) => `
     <a href="${esc(p.url)}" target="_blank" rel="noreferrer">
       <strong>${esc(p.name)}</strong>
-      <div class="muted">${esc(p.kind)} · ${esc(p.url)}</div>
+      <div class="muted">${esc(p.kind)} - ${esc(p.url)}</div>
     </a>
   `).join("");
 
@@ -115,15 +150,157 @@ function gitLine(label, state) {
 }
 
 async function runAction(action) {
-  const token = $("token").value;
   $("actionOutput").textContent = `Running ${action}...`;
-  const res = await fetch(`/api/actions/${action}`, {
+  const result = await fetchJson(`/api/actions/${action}`, {
     method: "POST",
-    headers: token ? {"X-Control-Room-Token": token} : {},
+    headers: tokenHeaders(),
   });
-  const text = await res.text();
-  $("actionOutput").textContent = text;
+  $("actionOutput").textContent = JSON.stringify(result, null, 2);
   await loadSummary();
+}
+
+function settingId(key) {
+  return `setting-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
+async function loadPokerAdmin() {
+  $("pokerAdminOutput").textContent = "Loading poker admin...";
+  const data = await fetchJson("/api/poker-admin", {headers: tokenHeaders()});
+  renderPokerAdmin(data);
+  $("pokerAdminOutput").textContent = "Poker admin loaded.";
+}
+
+function renderPokerAdmin(data) {
+  const summary = data.summary || {};
+  $("pokerAdminSummary").innerHTML = [
+    metric("Users", summary.users ?? 0, true),
+    metric("Chats", summary.chats ?? 0, true),
+    metric("Scores", summary.score_entries ?? 0, true),
+    metric("Sessions", sessionCount(data.sessions), true),
+  ].join("");
+
+  const users = data.users?.items || [];
+  $("pokerUsers").innerHTML = `
+    <thead><tr><th>ID</th><th>User</th><th>Scores</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${users.map((u) => `
+        <tr>
+          <td>${esc(u.id)}</td>
+          <td><strong>${esc(u.display_name || u.username || "user")}</strong><div class="muted">@${esc(u.username || "-")}</div></td>
+          <td>G ${esc(u.scores?.global || 0)} / D ${esc(u.scores?.duel || 0)} / C ${esc(u.scores?.chat || 0)}</td>
+          <td>${pill(!u.is_blocked, u.is_blocked ? "blocked" : "active")}</td>
+          <td><button data-block-user="${esc(u.id)}" data-block-state="${u.is_blocked ? "false" : "true"}">${u.is_blocked ? "Unblock" : "Block"}</button></td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+
+  const boards = data.leaderboards || {};
+  $("pokerLeaderboards").innerHTML = ["global", "duel"].map((scope) => {
+    const items = boards[scope] || [];
+    return `
+      <div class="row">
+        <strong>${esc(scope)}</strong>
+        ${items.length ? items.map((item) => `
+          <p><span class="muted">#${esc(item.user_id)}</span> ${esc(item.display_name || item.username || "user")} - ${esc(item.score)}</p>
+        `).join("") : `<p class="muted">empty</p>`}
+      </div>
+    `;
+  }).join("");
+
+  $("pokerSettings").innerHTML = (data.settings?.items || []).map((setting) => {
+    const id = settingId(setting.key);
+    return `
+      <div class="row">
+        <strong>${esc(setting.key)}</strong>
+        <textarea id="${esc(id)}" spellcheck="false">${esc(JSON.stringify(setting.value, null, 2))}</textarea>
+        <button data-save-setting="${esc(setting.key)}">Save setting</button>
+      </div>
+    `;
+  }).join("");
+
+  $("pokerAudit").innerHTML = (data.audit?.items || []).map((item) => `
+    <div class="row">
+      <strong>${esc(item.action)}</strong>
+      <p class="muted">${esc(item.created_at)} / ${esc(item.actor)} / ${esc(item.target || "-")}</p>
+      <pre class="terminal">${esc(JSON.stringify(item.meta || {}, null, 2))}</pre>
+    </div>
+  `).join("");
+
+  document.querySelectorAll("[data-save-setting]").forEach((button) => {
+    button.addEventListener("click", () => saveSetting(button.dataset.saveSetting));
+  });
+  document.querySelectorAll("[data-block-user]").forEach((button) => {
+    button.addEventListener("click", () => toggleBlock(button.dataset.blockUser, button.dataset.blockState === "true"));
+  });
+}
+
+function sessionCount(data) {
+  const sessions = data?.body?.sessions || data?.sessions || {};
+  const redis = sessions.redis || {};
+  return Number(redis.classic || 0) + Number(redis.pending || 0) + Number(redis.duel || 0);
+}
+
+async function submitScoreAdjust() {
+  const payload = {
+    user_id: Number($("scoreUserId").value),
+    delta: Number($("scoreDelta").value),
+    scope: $("scoreScope").value,
+    reason: $("scoreReason").value || "control_room_adjust",
+  };
+  if ($("scoreChatId").value) payload.chat_id = Number($("scoreChatId").value);
+  const result = await fetchJson("/api/poker-admin/score-adjust", {
+    method: "POST",
+    headers: tokenHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
+}
+
+async function submitScoreReset() {
+  if (!confirm("Reset selected poker score ledger entries?")) return;
+  const payload = {
+    reason: $("resetReason").value || "control_room_reset",
+  };
+  if ($("resetScope").value) payload.scope = $("resetScope").value;
+  if ($("resetUserId").value) payload.user_id = Number($("resetUserId").value);
+  if ($("resetChatId").value) payload.chat_id = Number($("resetChatId").value);
+  const result = await fetchJson("/api/poker-admin/score-reset", {
+    method: "POST",
+    headers: tokenHeaders(true),
+    body: JSON.stringify(payload),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
+}
+
+async function saveSetting(key) {
+  const textarea = $(settingId(key));
+  let value;
+  try {
+    value = JSON.parse(textarea.value);
+  } catch (err) {
+    $("pokerAdminOutput").textContent = `Invalid JSON for ${key}: ${err}`;
+    return;
+  }
+  const result = await fetchJson(`/api/poker-admin/settings/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    headers: tokenHeaders(true),
+    body: JSON.stringify({value}),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
+}
+
+async function toggleBlock(userId, isBlocked) {
+  const result = await fetchJson(`/api/poker-admin/users/${encodeURIComponent(userId)}/block`, {
+    method: "PATCH",
+    headers: tokenHeaders(true),
+    body: JSON.stringify({is_blocked: isBlocked}),
+  });
+  $("pokerAdminOutput").textContent = JSON.stringify(result, null, 2);
+  await loadPokerAdmin();
 }
 
 document.querySelectorAll("[data-action]").forEach((button) => {
@@ -134,6 +311,16 @@ document.querySelectorAll("[data-action]").forEach((button) => {
 
 $("refresh").addEventListener("click", () => loadSummary().catch((err) => {
   $("serverState").textContent = String(err);
+}));
+
+$("loadPokerAdmin").addEventListener("click", () => loadPokerAdmin().catch((err) => {
+  $("pokerAdminOutput").textContent = String(err);
+}));
+$("adjustScore").addEventListener("click", () => submitScoreAdjust().catch((err) => {
+  $("pokerAdminOutput").textContent = String(err);
+}));
+$("resetScores").addEventListener("click", () => submitScoreReset().catch((err) => {
+  $("pokerAdminOutput").textContent = String(err);
 }));
 
 loadSummary().catch((err) => {

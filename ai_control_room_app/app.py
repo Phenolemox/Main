@@ -4,8 +4,8 @@ import subprocess
 import time
 from pathlib import Path
 from typing import Any
-from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -16,6 +16,8 @@ APP_NAME = "ai-control-room"
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONTROL_TOKEN = os.getenv("CONTROL_ROOM_TOKEN", "").strip()
+POKER_ADMIN_BASE_URL = os.getenv("POKER_ADMIN_BASE_URL", "http://10.8.0.1:8140").rstrip("/")
+POKER_ADMIN_TOKEN = os.getenv("POKER_ADMIN_TOKEN", "").strip()
 
 PANELS = [
     {"name": "Homepage", "url": "http://10.8.0.1:3010", "kind": "dashboard"},
@@ -53,6 +55,17 @@ HEALTH_ENDPOINTS = [
     {"name": "poker-bot", "url": "http://10.8.0.1:8140/health"},
     {"name": "poker-ready", "url": "http://10.8.0.1:8140/ready"},
     {"name": "poker-sessions", "url": "http://10.8.0.1:8140/ops/sessions"},
+]
+
+BOTS = [
+    {
+        "id": "poker-bot",
+        "name": "MyPoker",
+        "service": "poker-bot",
+        "repo": "Phenolemox/poker-bot",
+        "api": "http://10.8.0.1:8140",
+        "admin_api_configured": bool(POKER_ADMIN_TOKEN),
+    }
 ]
 
 ALLOWED_LOGS = {
@@ -138,6 +151,84 @@ def read_url(url: str, timeout: int = 5) -> dict[str, Any]:
     }
 
 
+def request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+    payload: dict[str, Any] | None = None,
+    timeout: int = 10,
+) -> dict[str, Any]:
+    data = None
+    request_headers = {"Accept": "application/json"}
+    if headers:
+        request_headers.update(headers)
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        request_headers["Content-Type"] = "application/json"
+    started = time.time()
+    request = Request(url, data=data, headers=request_headers, method=method)
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            body = response.read(500_000).decode("utf-8", "replace")
+            status = response.status
+    except HTTPError as exc:
+        body = exc.read(100_000).decode("utf-8", "replace")
+        try:
+            parsed_error: Any = json.loads(body)
+        except Exception:
+            parsed_error = body[:1000]
+        return {
+            "ok": False,
+            "status": exc.code,
+            "url": url,
+            "body": parsed_error,
+            "latency_ms": round((time.time() - started) * 1000),
+        }
+    except URLError as exc:
+        return {"ok": False, "url": url, "error": str(exc), "latency_ms": round((time.time() - started) * 1000)}
+    except Exception as exc:
+        return {"ok": False, "url": url, "error": str(exc), "latency_ms": round((time.time() - started) * 1000)}
+
+    try:
+        parsed: Any = json.loads(body)
+    except Exception:
+        parsed = body[:2000]
+    return {
+        "ok": 200 <= status < 300,
+        "status": status,
+        "url": url,
+        "body": parsed,
+        "latency_ms": round((time.time() - started) * 1000),
+    }
+
+
+def poker_admin_headers() -> dict[str, str]:
+    if not POKER_ADMIN_TOKEN:
+        raise HTTPException(status_code=503, detail="POKER_ADMIN_TOKEN is not configured")
+    return {"X-Admin-Token": POKER_ADMIN_TOKEN, "X-Admin-Actor": "ai-control-room"}
+
+
+def poker_admin_request(
+    path: str,
+    *,
+    method: str = "GET",
+    payload: dict[str, Any] | None = None,
+    timeout: int = 15,
+) -> dict[str, Any]:
+    result = request_json(
+        f"{POKER_ADMIN_BASE_URL}{path}",
+        method=method,
+        headers=poker_admin_headers(),
+        payload=payload,
+        timeout=timeout,
+    )
+    if not result["ok"]:
+        status = result.get("status") or 502
+        raise HTTPException(status_code=status, detail=result.get("body") or result.get("error") or "poker admin error")
+    return result["body"]
+
+
 def service_state(name: str) -> dict[str, Any]:
     is_active = run(["systemctl", "is-active", name], timeout=5)
     is_enabled = run(["systemctl", "is-enabled", name], timeout=5)
@@ -220,7 +311,12 @@ def index():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": APP_NAME, "write_actions_configured": bool(CONTROL_TOKEN)}
+    return {
+        "status": "healthy",
+        "service": APP_NAME,
+        "write_actions_configured": bool(CONTROL_TOKEN),
+        "poker_admin_configured": bool(POKER_ADMIN_TOKEN),
+    }
 
 
 @app.get("/api/summary")
@@ -242,11 +338,65 @@ def summary():
         "projects": projects,
         "health": healths,
         "panels": PANELS,
+        "bots": BOTS,
         "apps": app_dirs(),
         "ports": port_snapshot(),
         "backups": latest_backups(),
         "write_actions_configured": bool(CONTROL_TOKEN),
+        "poker_admin_configured": bool(POKER_ADMIN_TOKEN),
     }
+
+
+@app.get("/api/bots")
+def bots():
+    return {
+        "items": [
+            {
+                **bot,
+                "service_state": service_state(bot["service"]),
+                "health": read_url(f"{bot['api']}/health"),
+            }
+            for bot in BOTS
+        ]
+    }
+
+
+@app.get("/api/poker-admin")
+def poker_admin(x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return {
+        "summary": poker_admin_request("/admin/summary"),
+        "users": poker_admin_request("/admin/users"),
+        "chats": poker_admin_request("/admin/chats"),
+        "settings": poker_admin_request("/admin/settings"),
+        "leaderboards": poker_admin_request("/admin/leaderboards"),
+        "audit": poker_admin_request("/admin/audit?limit=30"),
+        "sessions": read_url(f"{POKER_ADMIN_BASE_URL}/ops/sessions"),
+    }
+
+
+@app.post("/api/poker-admin/score-adjust")
+def poker_score_adjust(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request("/admin/score/adjust", method="POST", payload=payload)
+
+
+@app.post("/api/poker-admin/score-reset")
+def poker_score_reset(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request("/admin/score/reset", method="POST", payload=payload)
+
+
+@app.patch("/api/poker-admin/users/{user_id}/block")
+def poker_user_block(user_id: int, payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request(f"/admin/users/{user_id}/block", method="PATCH", payload=payload)
+
+
+@app.put("/api/poker-admin/settings/{key}")
+def poker_setting_update(key: str, payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
+    require_action_token(x_control_room_token)
+    return poker_admin_request(f"/admin/settings/{key}", method="PUT", payload=payload)
 
 
 @app.get("/api/logs/{service}")

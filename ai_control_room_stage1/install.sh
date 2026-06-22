@@ -54,6 +54,51 @@ if [ ! -f "$APP/.env" ]; then
   chmod 600 "$APP/.env"
 fi
 
+python3 - <<'PY'
+from pathlib import Path
+
+control_env = Path('/opt/apps/ai-control-room/.env')
+poker_env = Path('/opt/apps/poker-bot/.env')
+
+def read_env(path: Path) -> dict[str, str]:
+    values = {}
+    if not path.exists():
+        return values
+    for line in path.read_text().splitlines():
+        if '=' in line and not line.lstrip().startswith('#'):
+            key, value = line.split('=', 1)
+            values[key] = value
+    return values
+
+control = read_env(control_env)
+poker = read_env(poker_env)
+
+updates = {
+    'POKER_ADMIN_BASE_URL': control.get('POKER_ADMIN_BASE_URL') or 'http://10.8.0.1:8140',
+}
+if not control.get('POKER_ADMIN_TOKEN') and poker.get('ADMIN_TOKEN'):
+    updates['POKER_ADMIN_TOKEN'] = poker['ADMIN_TOKEN']
+
+lines = control_env.read_text().splitlines() if control_env.exists() else []
+seen = set()
+new_lines = []
+for line in lines:
+    if '=' not in line or line.lstrip().startswith('#'):
+        new_lines.append(line)
+        continue
+    key, _value = line.split('=', 1)
+    if key in updates:
+        new_lines.append(f'{key}={updates[key]}')
+        seen.add(key)
+    else:
+        new_lines.append(line)
+for key, value in updates.items():
+    if key not in seen and key not in control:
+        new_lines.append(f'{key}={value}')
+control_env.write_text('\n'.join(new_lines) + '\n')
+control_env.chmod(0o600)
+PY
+
 python3 -m venv "$APP/.venv"
 "$APP/.venv/bin/python" -m pip install --upgrade pip >/dev/null
 "$APP/.venv/bin/pip" install -r "$APP/requirements.txt" >/dev/null

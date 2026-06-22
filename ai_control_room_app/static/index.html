@@ -67,6 +67,78 @@
       </div>
     </section>
 
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Bot Registry</h2>
+        <span id="botCount"></span>
+      </div>
+      <div class="cards" id="bots"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Poker Admin</h2>
+        <div class="inline-actions">
+          <span id="pokerAdminState"></span>
+          <button id="loadPokerAdmin" title="Load protected poker admin data">Load</button>
+        </div>
+      </div>
+      <div class="admin-grid">
+        <div>
+          <h3>Score Adjust</h3>
+          <div class="form-grid">
+            <input id="scoreUserId" type="number" min="1" placeholder="User ID">
+            <input id="scoreDelta" type="number" placeholder="Delta">
+            <select id="scoreScope">
+              <option value="global">global</option>
+              <option value="duel">duel</option>
+              <option value="chat">chat</option>
+            </select>
+            <input id="scoreChatId" type="number" min="1" placeholder="Chat ID optional">
+            <input id="scoreReason" placeholder="Reason" value="control_room_adjust">
+            <button id="adjustScore">Apply</button>
+          </div>
+        </div>
+        <div>
+          <h3>Score Reset</h3>
+          <div class="form-grid">
+            <select id="resetScope">
+              <option value="">all scopes</option>
+              <option value="global">global</option>
+              <option value="duel">duel</option>
+              <option value="chat">chat</option>
+            </select>
+            <input id="resetUserId" type="number" min="1" placeholder="User ID optional">
+            <input id="resetChatId" type="number" min="1" placeholder="Chat ID optional">
+            <input id="resetReason" placeholder="Reason" value="control_room_reset">
+            <button id="resetScores">Reset</button>
+          </div>
+        </div>
+      </div>
+      <div class="status-strip compact" id="pokerAdminSummary"></div>
+      <div class="grid two">
+        <div class="admin-block">
+          <div class="panel-head"><h3>Users</h3></div>
+          <div class="table-wrap"><table id="pokerUsers"></table></div>
+        </div>
+        <div class="admin-block">
+          <div class="panel-head"><h3>Leaderboards</h3></div>
+          <div id="pokerLeaderboards" class="stack"></div>
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="admin-block">
+          <div class="panel-head"><h3>Settings</h3></div>
+          <div id="pokerSettings" class="stack"></div>
+        </div>
+        <div class="admin-block">
+          <div class="panel-head"><h3>Audit</h3></div>
+          <div id="pokerAudit" class="stack"></div>
+        </div>
+      </div>
+      <pre id="pokerAdminOutput" class="terminal small"></pre>
+    </section>
+
     <section class="grid two">
       <div class="panel">
         <div class="panel-head">
