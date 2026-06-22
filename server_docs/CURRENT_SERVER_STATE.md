@@ -57,7 +57,7 @@ Updated from live SSH and API checks on 2026-06-22.
 
 - Public domain/TLS routing is not finalized.
 - Control-room Stage1 is live, but public routing, login UX, audit log and deeper poker-bot admin actions are not finished.
-- Control-room write actions are disabled until `CONTROL_ROOM_TOKEN` is configured in `/opt/apps/ai-control-room/.env`.
+- Control-room write actions are enabled; `CONTROL_ROOM_TOKEN` is configured server-side in `/opt/apps/ai-control-room/.env` and must not be committed.
 - MCP bridge is active, but its HTTP health check needs a documented endpoint or command-level check.
 - Poker bot still uses SQLite; PostgreSQL should be the production target before broad public launch.
 - `Phenolemox/Main` contains many historical stage folders. They are retained for audit, but active work should use the current folders only.
