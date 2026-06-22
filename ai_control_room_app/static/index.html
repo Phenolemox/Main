@@ -13,7 +13,10 @@
       <h1>Control Room</h1>
     </div>
     <div class="toolbar">
-      <input id="token" type="password" placeholder="Control token" autocomplete="off">
+      <span id="authState" class="pill warn">checking auth</span>
+      <input id="loginPassword" type="password" placeholder="Control password" autocomplete="current-password">
+      <button id="login" title="Start admin session">Login</button>
+      <button id="logout" class="hidden" title="End admin session">Logout</button>
       <button id="refresh" title="Refresh">Refresh</button>
     </div>
   </header>

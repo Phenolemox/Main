@@ -12,7 +12,7 @@ The server already has useful panels:
 - Portainer on `10.8.0.1:9443`
 - Code Server on `10.8.0.1:8080`
 
-Stage3 custom UI is now deployed:
+Stage4 custom UI is now deployed:
 
 - App path: `/opt/apps/ai-control-room`
 - Service: `ai-control-room.service`
@@ -21,8 +21,9 @@ Stage3 custom UI is now deployed:
 - Main summary API: `/api/summary`
 - Bot registry API: `/api/bots`
 - Poker Admin API: `/api/poker-admin`
-- Write actions: guarded by `CONTROL_ROOM_TOKEN`
-- Poker Admin bridge: guarded by `CONTROL_ROOM_TOKEN` and server-side `POKER_ADMIN_TOKEN`
+- Auth API: `/api/auth/me`, `/api/auth/login`, `/api/auth/logout`
+- Write actions: guarded by Control Room session cookie or `X-Control-Room-Token`
+- Poker Admin bridge: guarded by Control Room auth and server-side `POKER_ADMIN_TOKEN`
 
 ## Product Direction
 
@@ -37,19 +38,20 @@ Build a custom admin cockpit that does not replace specialized tools. It should 
 - poker-bot admin drill-down;
 - links to Homepage, Gatus, Netdata, Dozzle, Adminer, Portainer and Code Server.
 
-## Stage3 Version
+## Stage4 Version
 
 Implemented as a FastAPI backend plus a dense web UI:
 
 - backend reads from systemd, health endpoints, Git state, filesystem state and known service manifests;
 - frontend shows server state, services, bot registry, GitHub/app state, health endpoints, backups, logs and panel links;
+- UI login creates an `HttpOnly`, `SameSite=Strict` session cookie from `CONTROL_ROOM_TOKEN`; header token auth remains available for automation;
 - Poker Admin drill-down shows bot summary, users with score totals and today's attempts, attempts table, leaderboards, settings editor and audit log;
 - Poker Admin actions can adjust/reset scores, grant/reset attempts and block/unblock users through the bot Admin API;
-- write actions require token auth and confirmation;
+- write actions require an active session or explicit automation token and confirmation;
 - no secrets are displayed;
 - domain should be `admin.<user-domain>` after TLS is configured.
 
-Next build should add a proper login screen, richer bot registry metadata, MAX status and a public domain/TLS route.
+Next build should add richer bot registry metadata, MAX status and a public domain/TLS route.
 
 ## Poker Bot Drill-Down
 
@@ -75,3 +77,5 @@ Use one owned domain and create subdomains:
 - `api.<domain>` for public API edge if needed.
 
 TLS should be issued for the chosen domain. Reusing another site's certificate is only valid if the new hostname is included in that certificate.
+
+When the control room is exposed through TLS, set `CONTROL_ROOM_COOKIE_SECURE=true` in `/opt/apps/ai-control-room/.env`.

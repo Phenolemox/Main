@@ -81,14 +81,15 @@ ssh -i .codex_ai_server_ed25519 -L 8150:10.8.0.1:8150 admin@5.129.229.170
 
 Then open `http://127.0.0.1:8150`.
 
-Write actions are protected by the `X-Control-Room-Token` header. Keep the token only in `/opt/apps/ai-control-room/.env`; never commit it.
+Write actions are protected by a Control Room session cookie in the UI. Automation can use the `X-Control-Room-Token` header. Keep the token only in `/opt/apps/ai-control-room/.env`; never commit it.
 
-Poker Admin is also inside Control Room. It requires the same `CONTROL_ROOM_TOKEN` in the UI and uses server-side `POKER_ADMIN_TOKEN` to talk to `poker-bot`.
+Poker Admin is also inside Control Room. It requires an active Control Room session in the UI and uses server-side `POKER_ADMIN_TOKEN` to talk to `poker-bot`.
 
-Server-side API smoke test without printing tokens:
+Server-side auth and Poker Admin smoke test without printing tokens:
 
 ```bash
 python3 - <<'PY'
+import json
 from pathlib import Path
 from urllib.request import Request, urlopen
 
@@ -96,11 +97,26 @@ token = ''
 for line in Path('/opt/apps/ai-control-room/.env').read_text().splitlines():
     if line.startswith('CONTROL_ROOM_TOKEN='):
         token = line.split('=', 1)[1].strip()
-req = Request('http://10.8.0.1:8150/api/poker-admin', headers={'X-Control-Room-Token': token})
-with urlopen(req, timeout=20) as response:
-    print(response.status)
+for path in ['/api/auth/me', '/api/poker-admin']:
+    req = Request('http://10.8.0.1:8150' + path, headers={'X-Control-Room-Token': token})
+    with urlopen(req, timeout=20) as response:
+        print(path, response.status)
 PY
 ```
+
+UI login endpoint smoke test with a temporary cookie jar:
+
+```bash
+CONTROL_TOKEN=$(grep -E '^CONTROL_ROOM_TOKEN=' /opt/apps/ai-control-room/.env | cut -d= -f2-)
+COOKIE_JAR=$(mktemp)
+curl -fsS -c "$COOKIE_JAR" -H 'Content-Type: application/json' \
+  -d "{\"password\":\"$CONTROL_TOKEN\"}" http://10.8.0.1:8150/api/auth/login | jq .
+curl -fsS -b "$COOKIE_JAR" http://10.8.0.1:8150/api/auth/me | jq .
+rm -f "$COOKIE_JAR"
+unset CONTROL_TOKEN COOKIE_JAR
+```
+
+For public TLS deployment, set `CONTROL_ROOM_COOKIE_SECURE=true` in `/opt/apps/ai-control-room/.env`.
 
 Direct poker Admin API attempts check without printing tokens:
 

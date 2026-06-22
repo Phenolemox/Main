@@ -17,7 +17,7 @@ Updated from live SSH and API checks on 2026-06-22.
 
 - `ai-agent-api.service`: active, `http://10.8.0.1:8130/health` OK
 - `ai-mcp-bridge.service`: active on `10.8.0.1:8131`
-- `ai-control-room.service`: active and enabled, `http://10.8.0.1:8150/health` OK, `/api/summary` OK, `/api/poker-admin` OK with control token
+- `ai-control-room.service`: active and enabled, `http://10.8.0.1:8150/health` OK, `/api/summary` OK, `/api/poker-admin` OK with Control Room auth
 - Homepage dashboard: active on `10.8.0.1:3010`
 - Gatus monitor: active on `10.8.0.1:3001`
 - Code Server: active on `10.8.0.1:8080`
@@ -32,13 +32,13 @@ Updated from live SSH and API checks on 2026-06-22.
 - Service: `poker-bot.service`
 - Repo: `/opt/repos/poker-bot`
 - App: `/opt/apps/poker-bot`
-- Current commit: `9cdfb0f Add durable attempt ledger admin API`
+- Current commit: `3f10729 Document attempt ledger operations`
 - Health: OK
 - Ready: OK
 - Telegram polling: active
 - Telegram bot username: `mypokerbotofficial_bot`
 - Telegram commands: updated after Stage26
-- QA: `poker-qa` OK, `12 passed`
+- QA: `poker-qa` OK, `13 passed`
 - Admin API: active with `ADMIN_TOKEN`; supports users with scores and today's attempts, chats, settings, leaderboards, audit, score adjust, score reset, attempts grant/reset and block/unblock.
 - Attempts accounting: durable `attempt_ledger` table. `/cards` consumes attempts in SQLite; Redis remains for live game sessions.
 
@@ -58,8 +58,8 @@ Updated from live SSH and API checks on 2026-06-22.
 ## Current Yellow Points
 
 - Public domain/TLS routing is not finalized.
-- Control-room Stage3 is live with bot registry and Poker Admin drill-down. Public routing, login UX, MAX adapter and production DB migration are not finished.
-- Control-room write actions are enabled; `CONTROL_ROOM_TOKEN` is configured server-side in `/opt/apps/ai-control-room/.env` and must not be committed.
+- Control-room Stage4 is live with bot registry, login/session auth and Poker Admin drill-down. Public routing, MAX adapter and production DB migration are not finished.
+- Control-room write actions are enabled; UI login uses `CONTROL_ROOM_TOKEN` to create an `HttpOnly` session cookie. Automation can still use `X-Control-Room-Token`. The token is configured server-side in `/opt/apps/ai-control-room/.env` and must not be committed.
 - Control-room has `POKER_ADMIN_TOKEN` configured server-side from `/opt/apps/poker-bot/.env`; it must not be committed.
 - MCP bridge is active, but its HTTP health check needs a documented endpoint or command-level check.
 - Poker bot still uses SQLite; PostgreSQL should be the production target before broad public launch.

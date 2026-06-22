@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+let auth = {configured: false, authenticated: false};
 
 function pill(ok, text) {
   const cls = ok === true ? "good" : ok === false ? "bad" : "warn";
@@ -25,14 +26,13 @@ function bytes(value) {
 }
 
 function tokenHeaders(json = false) {
-  const token = $("token").value.trim();
-  const headers = token ? {"X-Control-Room-Token": token} : {};
+  const headers = {};
   if (json) headers["Content-Type"] = "application/json";
   return headers;
 }
 
 async function fetchJson(url, options = {}) {
-  const res = await fetch(url, options);
+  const res = await fetch(url, {credentials: "same-origin", ...options});
   const text = await res.text();
   let body;
   try {
@@ -47,6 +47,46 @@ async function fetchJson(url, options = {}) {
   return body;
 }
 
+function updateAuthUi() {
+  const state = $("authState");
+  state.className = `pill ${auth.configured ? (auth.authenticated ? "good" : "bad") : "bad"}`;
+  state.textContent = auth.configured ? (auth.authenticated ? "session ready" : "login required") : "token missing";
+  $("loginPassword").classList.toggle("hidden", auth.authenticated || !auth.configured);
+  $("login").classList.toggle("hidden", auth.authenticated || !auth.configured);
+  $("logout").classList.toggle("hidden", !auth.authenticated);
+}
+
+async function loadAuth() {
+  auth = await fetchJson("/api/auth/me");
+  updateAuthUi();
+}
+
+async function login() {
+  const password = $("loginPassword").value.trim();
+  if (!password) {
+    $("actionOutput").textContent = "Enter the control password.";
+    return;
+  }
+  const result = await fetchJson("/api/auth/login", {
+    method: "POST",
+    headers: tokenHeaders(true),
+    body: JSON.stringify({password}),
+  });
+  $("loginPassword").value = "";
+  await loadAuth();
+  $("actionOutput").textContent = `Logged in. Session TTL: ${Math.round((result.session_ttl_seconds || 0) / 3600)}h.`;
+}
+
+async function logout() {
+  await fetchJson("/api/auth/logout", {
+    method: "POST",
+    headers: tokenHeaders(),
+  });
+  auth = {configured: auth.configured, authenticated: false};
+  updateAuthUi();
+  $("pokerAdminOutput").textContent = "Logged out.";
+}
+
 async function loadSummary() {
   const data = await fetchJson("/api/summary");
   render(data);
@@ -55,10 +95,10 @@ async function loadSummary() {
 function render(data) {
   $("generatedAt").textContent = data.generated_at;
   $("actionState").innerHTML = data.write_actions_configured
-    ? pill(true, "write actions ready")
+    ? pill(auth.authenticated, auth.authenticated ? "session ready" : "login required")
     : pill(false, "token not configured");
   $("pokerAdminState").innerHTML = data.poker_admin_configured
-    ? pill(true, "poker admin ready")
+    ? pill(auth.authenticated, auth.authenticated ? "poker admin ready" : "login required")
     : pill(false, "poker token missing");
 
   const healthOk = data.health.filter((h) => h.result.ok).length;
@@ -368,6 +408,20 @@ $("refresh").addEventListener("click", () => loadSummary().catch((err) => {
   $("serverState").textContent = String(err);
 }));
 
+$("login").addEventListener("click", () => login().catch((err) => {
+  $("actionOutput").textContent = String(err);
+}));
+$("loginPassword").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    login().catch((err) => {
+      $("actionOutput").textContent = String(err);
+    });
+  }
+});
+$("logout").addEventListener("click", () => logout().catch((err) => {
+  $("actionOutput").textContent = String(err);
+}));
+
 $("loadPokerAdmin").addEventListener("click", () => loadPokerAdmin().catch((err) => {
   $("pokerAdminOutput").textContent = String(err);
 }));
@@ -384,6 +438,15 @@ $("resetAttempts").addEventListener("click", () => submitAttemptsReset().catch((
   $("pokerAdminOutput").textContent = String(err);
 }));
 
-loadSummary().catch((err) => {
+async function boot() {
+  await loadAuth().catch((err) => {
+    auth = {configured: false, authenticated: false};
+    updateAuthUi();
+    $("actionOutput").textContent = String(err);
+  });
+  await loadSummary();
+}
+
+boot().catch((err) => {
   $("serverState").textContent = String(err);
 });

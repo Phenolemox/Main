@@ -1,3 +1,4 @@
+import hmac
 import json
 import os
 import subprocess
@@ -7,7 +8,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request as FastAPIRequest, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -16,6 +17,9 @@ APP_NAME = "ai-control-room"
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONTROL_TOKEN = os.getenv("CONTROL_ROOM_TOKEN", "").strip()
+SESSION_COOKIE = "ai_control_room_session"
+SESSION_TTL_SECONDS = int(os.getenv("CONTROL_ROOM_SESSION_TTL_SECONDS", "43200"))
+COOKIE_SECURE = os.getenv("CONTROL_ROOM_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes"}
 POKER_ADMIN_BASE_URL = os.getenv("POKER_ADMIN_BASE_URL", "http://10.8.0.1:8140").rstrip("/")
 POKER_ADMIN_TOKEN = os.getenv("POKER_ADMIN_TOKEN", "").strip()
 
@@ -297,11 +301,44 @@ def port_snapshot() -> list[str]:
     return [line for line in output if "10.8.0.1" in line][:80]
 
 
-def require_action_token(x_control_room_token: str | None) -> None:
+def make_session_cookie(now: int | None = None) -> str:
     if not CONTROL_TOKEN:
         raise HTTPException(status_code=403, detail="CONTROL_ROOM_TOKEN is not configured")
-    if x_control_room_token != CONTROL_TOKEN:
-        raise HTTPException(status_code=401, detail="invalid control token")
+    issued_at = int(now or time.time())
+    expires_at = issued_at + SESSION_TTL_SECONDS
+    payload = f"v1:{expires_at}"
+    signature = hmac.new(CONTROL_TOKEN.encode("utf-8"), payload.encode("utf-8"), "sha256").hexdigest()
+    return f"v1.{expires_at}.{signature}"
+
+
+def session_cookie_valid(value: str | None, now: int | None = None) -> bool:
+    if not CONTROL_TOKEN or not value:
+        return False
+    parts = value.split(".")
+    if len(parts) != 3 or parts[0] != "v1":
+        return False
+    try:
+        expires_at = int(parts[1])
+    except ValueError:
+        return False
+    if expires_at < int(now or time.time()):
+        return False
+    payload = f"v1:{expires_at}"
+    expected = hmac.new(CONTROL_TOKEN.encode("utf-8"), payload.encode("utf-8"), "sha256").hexdigest()
+    return hmac.compare_digest(parts[2], expected)
+
+
+def request_authenticated(request: FastAPIRequest, x_control_room_token: str | None) -> bool:
+    if CONTROL_TOKEN and x_control_room_token and hmac.compare_digest(x_control_room_token, CONTROL_TOKEN):
+        return True
+    return session_cookie_valid(request.cookies.get(SESSION_COOKIE))
+
+
+def require_action_auth(request: FastAPIRequest, x_control_room_token: str | None) -> None:
+    if not CONTROL_TOKEN:
+        raise HTTPException(status_code=403, detail="CONTROL_ROOM_TOKEN is not configured")
+    if not request_authenticated(request, x_control_room_token):
+        raise HTTPException(status_code=401, detail="login required")
 
 
 @app.get("/", include_in_schema=False)
@@ -317,6 +354,40 @@ def health():
         "write_actions_configured": bool(CONTROL_TOKEN),
         "poker_admin_configured": bool(POKER_ADMIN_TOKEN),
     }
+
+
+@app.get("/api/auth/me")
+def auth_me(request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    return {
+        "configured": bool(CONTROL_TOKEN),
+        "authenticated": request_authenticated(request, x_control_room_token),
+        "session_ttl_seconds": SESSION_TTL_SECONDS,
+    }
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: dict[str, Any], response: Response):
+    if not CONTROL_TOKEN:
+        raise HTTPException(status_code=403, detail="CONTROL_ROOM_TOKEN is not configured")
+    password = str(payload.get("password") or payload.get("token") or "")
+    if not hmac.compare_digest(password, CONTROL_TOKEN):
+        raise HTTPException(status_code=401, detail="invalid login")
+    response.set_cookie(
+        SESSION_COOKIE,
+        make_session_cookie(),
+        max_age=SESSION_TTL_SECONDS,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite="strict",
+        path="/",
+    )
+    return {"ok": True, "session_ttl_seconds": SESSION_TTL_SECONDS}
+
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return {"ok": True}
 
 
 @app.get("/api/summary")
@@ -362,8 +433,8 @@ def bots():
 
 
 @app.get("/api/poker-admin")
-def poker_admin(x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_admin(request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return {
         "summary": poker_admin_request("/admin/summary"),
         "users": poker_admin_request("/admin/users"),
@@ -377,38 +448,38 @@ def poker_admin(x_control_room_token: str | None = Header(default=None)):
 
 
 @app.post("/api/poker-admin/score-adjust")
-def poker_score_adjust(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_score_adjust(payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request("/admin/score/adjust", method="POST", payload=payload)
 
 
 @app.post("/api/poker-admin/score-reset")
-def poker_score_reset(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_score_reset(payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request("/admin/score/reset", method="POST", payload=payload)
 
 
 @app.post("/api/poker-admin/attempts-grant")
-def poker_attempts_grant(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_attempts_grant(payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request("/admin/attempts/grant", method="POST", payload=payload)
 
 
 @app.post("/api/poker-admin/attempts-reset")
-def poker_attempts_reset(payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_attempts_reset(payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request("/admin/attempts/reset", method="POST", payload=payload)
 
 
 @app.patch("/api/poker-admin/users/{user_id}/block")
-def poker_user_block(user_id: int, payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_user_block(user_id: int, payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request(f"/admin/users/{user_id}/block", method="PATCH", payload=payload)
 
 
 @app.put("/api/poker-admin/settings/{key}")
-def poker_setting_update(key: str, payload: dict[str, Any], x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def poker_setting_update(key: str, payload: dict[str, Any], request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     return poker_admin_request(f"/admin/settings/{key}", method="PUT", payload=payload)
 
 
@@ -423,8 +494,8 @@ def logs(service: str, lines: int = 120):
 
 
 @app.post("/api/actions/{action}")
-def action(action: str, x_control_room_token: str | None = Header(default=None)):
-    require_action_token(x_control_room_token)
+def action(action: str, request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
     if action not in ACTION_COMMANDS:
         raise HTTPException(status_code=404, detail="unknown action")
     timeout = 300 if action in {"backup", "poker-qa"} else 60

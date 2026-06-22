@@ -59,6 +59,7 @@ main {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 input, select, textarea, button {
@@ -91,6 +92,7 @@ button {
 
 button:hover { border-color: var(--accent); }
 button:disabled { cursor: not-allowed; opacity: 0.45; }
+.hidden { display: none !important; }
 
 .grid {
   display: grid;

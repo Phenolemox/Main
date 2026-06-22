@@ -37,7 +37,7 @@ Open the custom control room through a private tunnel from a local terminal:
 ssh -i .codex_ai_server_ed25519 -L 8150:10.8.0.1:8150 admin@5.129.229.170
 ```
 
-Then visit `http://127.0.0.1:8150`. Read-only server status works without a token. Server actions and Poker Admin require `CONTROL_ROOM_TOKEN` in `/opt/apps/ai-control-room/.env`. Poker Admin connects to the bot through server-side `POKER_ADMIN_TOKEN`.
+Then visit `http://127.0.0.1:8150`. Read-only server status works without login. Server actions and Poker Admin require a Control Room session created with `CONTROL_ROOM_TOKEN` from `/opt/apps/ai-control-room/.env`. Automation can still use the `X-Control-Room-Token` header. Poker Admin connects to the bot through server-side `POKER_ADMIN_TOKEN`.
 
 ## Active Repositories
 
@@ -46,8 +46,8 @@ Then visit `http://127.0.0.1:8150`. Read-only server status works without a toke
 
 ## Current Poker Bot State
 
-- Latest deployed commit: `9cdfb0f Add durable attempt ledger admin API`
-- QA: `py_compile` OK, `pytest` OK, `12 passed`
+- Latest deployed commit: `3f10729 Document attempt ledger operations`
+- QA: `py_compile` OK, `pytest` OK, `13 passed`
 - Telegram bot: `mypokerbotofficial_bot`
 - Telegram polling: active
 - Admin API: summary, users with scores and daily attempts, chats, settings, leaderboards, audit, score adjust, score reset, attempts grant/reset and block/unblock
