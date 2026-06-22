@@ -12,7 +12,14 @@ The server already has useful panels:
 - Portainer on `10.8.0.1:9443`
 - Code Server on `10.8.0.1:8080`
 
-`/opt/apps/ai-control-room` is currently documentation, not a custom app.
+Stage1 custom UI is now deployed:
+
+- App path: `/opt/apps/ai-control-room`
+- Service: `ai-control-room.service`
+- Private URL: `http://10.8.0.1:8150`
+- Health: `/health`
+- Main summary API: `/api/summary`
+- Write actions: guarded by `CONTROL_ROOM_TOKEN`
 
 ## Product Direction
 
@@ -27,15 +34,17 @@ Build a custom admin cockpit that does not replace specialized tools. It should 
 - poker-bot admin drill-down;
 - links to Homepage, Gatus, Netdata, Dozzle, Adminer, Portainer and Code Server.
 
-## First Version
+## Stage1 Version
 
-Use a FastAPI backend plus a dense web UI:
+Implemented as a FastAPI backend plus a dense web UI:
 
-- backend reads from `ai-agent-api`, systemd, GitHub status and known service manifests;
-- frontend shows server state, bot cards, deploy state, backups and logs;
-- write actions require auth and confirmation;
+- backend reads from systemd, health endpoints, Git state, filesystem state and known service manifests;
+- frontend shows server state, services, GitHub/app state, health endpoints, backups, logs and panel links;
+- write actions require token auth and confirmation;
 - no secrets are displayed;
 - domain should be `admin.<user-domain>` after TLS is configured.
+
+Next build should add a proper login screen, audit log table, structured bot registry and poker-bot drill-down instead of only generic service actions.
 
 ## Poker Bot Drill-Down
 

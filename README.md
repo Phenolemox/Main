@@ -9,6 +9,7 @@ Current primary server:
 - Internal API network: `10.8.0.1`
 - Main control API: `ai-agent-api` on `10.8.0.1:8130`
 - MCP bridge: `ai-mcp-bridge` on `10.8.0.1:8131`
+- Custom control room: `ai-control-room` on `10.8.0.1:8150`
 - Poker bot API: `poker-bot` on `10.8.0.1:8140`
 - Monitoring: Netdata on `10.8.0.1:19999`
 
@@ -30,6 +31,14 @@ ai-mcp-check
 ai-backup-now
 ```
 
+Open the custom control room through a private tunnel from a local terminal:
+
+```bash
+ssh -i .codex_ai_server_ed25519 -L 8150:10.8.0.1:8150 admin@5.129.229.170
+```
+
+Then visit `http://127.0.0.1:8150`. Read-only status works without a token. Write actions require `CONTROL_ROOM_TOKEN` in `/opt/apps/ai-control-room/.env`.
+
 ## Active Repositories
 
 - `Phenolemox/Main`: control scripts, server docs, handoff docs, stage installers and reference assets.
@@ -48,6 +57,8 @@ ai-backup-now
 - `server_docs/`: server architecture, live state, operations and safety rules.
 - `pokerbot_docs/`: poker bot product and service instructions.
 - `server_codex_bootstrap_stage1/`: one-command bootstrap for server tools, GitHub sync and Codex SSH access.
+- `ai_control_room_app/`: custom FastAPI control-room UI for services, health, GitHub/app state, backups, logs and safe server actions.
+- `ai_control_room_stage1/`: installer for `/opt/apps/ai-control-room` and `ai-control-room.service`.
 - `pokerbot_v3_clean_stage26_linux/`: Linux-safe Stage26 installer for the modular poker bot.
 - `reference/screenshots/pokerbot/`: UI screenshots used as product reference.
 - Old `pokerbot_stage*` folders are historical installers. They are retained for audit only; new work should use the active folders above.

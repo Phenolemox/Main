@@ -4,7 +4,9 @@ Live audit source: SSH as `admin` on `5.129.229.170`, 2026-06-22 UTC.
 
 ## Summary
 
-The server is healthy and has enough capacity for the poker bot plus additional small bots and web apps. The main weak point is not CPU or memory; it is product structure and operational polish: old stage folders, partial historical installers, incomplete public routing/domain plan, and a control-room UI still missing.
+The server is healthy and has enough capacity for the poker bot plus additional small bots and web apps. The main weak point is not CPU or memory; it is product structure and operational polish: old stage folders, partial historical installers and incomplete public routing/domain plan.
+
+Post-audit update: Control Room Stage1 was added after the first audit and is live on `10.8.0.1:8150`.
 
 ## Hardware And OS
 
@@ -20,6 +22,7 @@ The server is healthy and has enough capacity for the poker bot plus additional 
 
 - `ai-agent-api.service`: active, health OK at `http://10.8.0.1:8130/health`
 - `ai-mcp-bridge.service`: active, MCP streamable HTTP bridge on `10.8.0.1:8131`
+- `ai-control-room.service`: active, health OK at `http://10.8.0.1:8150/health`
 - `poker-bot.service`: active, health OK at `http://10.8.0.1:8140/health`
 - `poker-redis.service`: active on `127.0.0.1:6380` and `10.8.0.1:6380`
 - `redis-server.service`: active on `6379`
@@ -29,6 +32,7 @@ The server is healthy and has enough capacity for the poker bot plus additional 
 
 Observed control panels:
 
+- Custom Control Room: `http://10.8.0.1:8150`
 - Homepage Dashboard: `http://10.8.0.1:3010`
 - Gatus monitor: `http://10.8.0.1:3001`
 - Code Server: `http://10.8.0.1:8080`
@@ -51,9 +55,9 @@ Active paths:
 - `/opt/backups`
 - `/opt/logs`
 
-GitHub state after Stage26:
+GitHub state after Stage26 and Control Room Stage1:
 
-- `/opt/repos/Main`: synced to `6360dba`
+- `/opt/repos/Main`: synced to `53a8e6f`
 - `/opt/repos/poker-bot`: synced to `db34a7e`
 - `/opt/apps/poker-bot`: synced to `db34a7e`
 
@@ -86,7 +90,7 @@ Next improvement: add a manifest with checksums and explicit included/excluded p
 
 ## Issues To Fix Next
 
-- Build real custom web admin/control-room UI over `ai-agent-api`, Netdata and project metadata. Homepage/Gatus/Dozzle already exist and should be linked, not duplicated.
+- Extend Control Room Stage1 with login UX, action audit log, bot registry and a poker-bot admin drill-down. Homepage/Gatus/Dozzle already exist and should be linked, not duplicated.
 - Add domain/TLS routing for public sites, Mini Apps and admin panels.
 - Add explicit bot registry so poker-bot becomes one managed service among many.
 - Add production database plan: keep SQLite only for small/internal stage, move high-traffic bot data to PostgreSQL.

@@ -57,10 +57,31 @@ telegram-set-commands
 
 ```bash
 curl -s http://10.8.0.1:8130/health
+curl -s http://10.8.0.1:8150/health
+curl -s http://10.8.0.1:8150/api/summary | python3 -m json.tool | head -80
 curl -s http://10.8.0.1:8140/health
 curl -s http://10.8.0.1:19999/api/v1/info | jq '.alarms'
 ai-mcp-check
 ```
+
+## Control Room UI
+
+The custom control room runs privately on the server:
+
+```bash
+systemctl status ai-control-room.service --no-pager
+curl -s http://10.8.0.1:8150/health
+```
+
+From a local machine, open it through SSH tunneling:
+
+```bash
+ssh -i .codex_ai_server_ed25519 -L 8150:10.8.0.1:8150 admin@5.129.229.170
+```
+
+Then open `http://127.0.0.1:8150`.
+
+Write actions are protected by the `X-Control-Room-Token` header. Keep the token only in `/opt/apps/ai-control-room/.env`; never commit it.
 
 ## GitHub Sync
 
