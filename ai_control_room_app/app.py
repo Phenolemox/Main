@@ -143,9 +143,9 @@ def service_state(name: str) -> dict[str, Any]:
     is_enabled = run(["systemctl", "is-enabled", name], timeout=5)
     return {
         "name": name,
-        "active": is_active.stdout,
-        "enabled": is_enabled.stdout,
-        "ok": is_active.stdout == "active",
+        "active": is_active["stdout"],
+        "enabled": is_enabled["stdout"],
+        "ok": is_active["stdout"] == "active",
     }
 
 
@@ -160,7 +160,7 @@ def git_state(path: str | None) -> dict[str, Any] | None:
     status = run(["git", "-C", path, "status", "--short"], timeout=8)
     return {
         "path": path,
-        "ok": head.ok if hasattr(head, "ok") else head["ok"],
+        "ok": head["ok"],
         "head": head["stdout"],
         "origin_main": origin["stdout"],
         "dirty": bool(status["stdout"]),
