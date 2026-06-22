@@ -12,14 +12,17 @@ The server already has useful panels:
 - Portainer on `10.8.0.1:9443`
 - Code Server on `10.8.0.1:8080`
 
-Stage1 custom UI is now deployed:
+Stage2 custom UI is now deployed:
 
 - App path: `/opt/apps/ai-control-room`
 - Service: `ai-control-room.service`
 - Private URL: `http://10.8.0.1:8150`
 - Health: `/health`
 - Main summary API: `/api/summary`
+- Bot registry API: `/api/bots`
+- Poker Admin API: `/api/poker-admin`
 - Write actions: guarded by `CONTROL_ROOM_TOKEN`
+- Poker Admin bridge: guarded by `CONTROL_ROOM_TOKEN` and server-side `POKER_ADMIN_TOKEN`
 
 ## Product Direction
 
@@ -34,17 +37,19 @@ Build a custom admin cockpit that does not replace specialized tools. It should 
 - poker-bot admin drill-down;
 - links to Homepage, Gatus, Netdata, Dozzle, Adminer, Portainer and Code Server.
 
-## Stage1 Version
+## Stage2 Version
 
 Implemented as a FastAPI backend plus a dense web UI:
 
 - backend reads from systemd, health endpoints, Git state, filesystem state and known service manifests;
-- frontend shows server state, services, GitHub/app state, health endpoints, backups, logs and panel links;
+- frontend shows server state, services, bot registry, GitHub/app state, health endpoints, backups, logs and panel links;
+- Poker Admin drill-down shows bot summary, users with score totals, leaderboards, settings editor and audit log;
+- Poker Admin actions can adjust/reset scores and block/unblock users through the bot Admin API;
 - write actions require token auth and confirmation;
 - no secrets are displayed;
 - domain should be `admin.<user-domain>` after TLS is configured.
 
-Next build should add a proper login screen, audit log table, structured bot registry and poker-bot drill-down instead of only generic service actions.
+Next build should add a proper login screen, attempts management, richer bot registry metadata, MAX status and a public domain/TLS route.
 
 ## Poker Bot Drill-Down
 
@@ -52,12 +57,13 @@ The poker page should include:
 
 - health and Telegram status;
 - active sessions;
-- daily attempts;
+- daily attempts; not implemented yet as a durable data model
 - top score and top duel;
-- rule text editor;
-- user score/attempt adjustment;
+- rule/settings JSON editor;
+- user score adjustment;
 - reset actions with audit log;
-- Mini App URL and MAX App URL status.
+- block/unblock users;
+- Mini App URL and MAX App URL status; still pending public domain/TLS.
 
 ## Domain/TLS Decision
 

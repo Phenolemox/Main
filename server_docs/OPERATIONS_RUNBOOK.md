@@ -83,6 +83,25 @@ Then open `http://127.0.0.1:8150`.
 
 Write actions are protected by the `X-Control-Room-Token` header. Keep the token only in `/opt/apps/ai-control-room/.env`; never commit it.
 
+Poker Admin is also inside Control Room. It requires the same `CONTROL_ROOM_TOKEN` in the UI and uses server-side `POKER_ADMIN_TOKEN` to talk to `poker-bot`.
+
+Server-side API smoke test without printing tokens:
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+token = ''
+for line in Path('/opt/apps/ai-control-room/.env').read_text().splitlines():
+    if line.startswith('CONTROL_ROOM_TOKEN='):
+        token = line.split('=', 1)[1].strip()
+req = Request('http://10.8.0.1:8150/api/poker-admin', headers={'X-Control-Room-Token': token})
+with urlopen(req, timeout=20) as response:
+    print(response.status)
+PY
+```
+
 ## GitHub Sync
 
 ```bash

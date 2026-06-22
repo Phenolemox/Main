@@ -15,7 +15,7 @@ Poker-bot is one managed project on the AI server. It is not the server itself.
 
 ## Current Version
 
-- Commit: `db34a7e Refactor Telegram poker bot to v3 modular UI`
+- Commit: `93d1f8f Expand poker admin API`
 - Telegram username: `mypokerbotofficial_bot`
 - Telegram mode: polling
 
@@ -55,10 +55,27 @@ Expected current result:
 12 passed
 ```
 
+## Admin API
+
+Protected by `X-Admin-Token` when `ADMIN_TOKEN` is configured:
+
+- `GET /admin/summary`
+- `GET /admin/users`
+- `GET /admin/chats`
+- `GET /admin/settings`
+- `GET /admin/leaderboards`
+- `GET /admin/audit`
+- `POST /admin/score/adjust`
+- `POST /admin/score/reset`
+- `PATCH /admin/users/{user_id}/block`
+- `PUT /admin/settings/{key}`
+
+Control Room uses these endpoints through server-side `POKER_ADMIN_TOKEN`.
+
 ## Product Next Steps
 
 - Add a real Mini App frontend and set `TELEGRAM_MINI_APP_URL`.
 - Add MAX adapter and set `MAX_APP_URL`.
-- Add web admin pages for rules, scores, attempts and sessions.
+- Add durable attempts accounting and expose it in Admin API.
 - Add PostgreSQL migration before broad launch.
 - Add screenshot-based UX regression checklist.
