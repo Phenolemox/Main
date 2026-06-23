@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
     _ensure_data_dir()
     task: asyncio.Task | None = None
     if settings.telegram_polling_enabled and settings.telegram_bot_token:
-        from CB_Balloons import build_application, configure_commands
+        from application import build_application, configure_commands
 
         application = build_application()
         await application.initialize()

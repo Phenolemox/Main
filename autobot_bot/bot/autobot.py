@@ -11,6 +11,7 @@ request = HTTPXRequest(connect_timeout=10.0, read_timeout=20.0)
 
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from plates_config import license_plates
+import phrases
 # Быстрый доступ по типу комбинации
 import nest_asyncio
 import logging
@@ -80,73 +81,98 @@ def generate_plate():
     plate += random.choice(letters) + random.choice(letters)
     return plate
 
-def calculate_plate(plate):
-    """
-    1) Категория 3 — специальные номера из plates_config.py
-    2) Категория 2 — 8 стандартных фич по таблице
-    3) Категория 1 — обычный номер
-    """
-    # 1. Извлекаем цифры и буквы
-    digits = plate[1:4]           # например "122"
-    nums = [int(d) for d in digits]
+def _digit_feature(digits, nums):
+    """Очки и фраза по цифрам (без точечных спец-комбинаций). None если ничего."""
+    # Три одинаковые цифры
+    if nums[0] == nums[1] == nums[2]:
+        return 100, phrases.pick(phrases.TRIPLE_DIGITS_PHRASES, d=digits)
+    # Зеркальные цифры (палиндром)
+    if digits[0] == digits[2] and digits[0] != digits[1]:
+        return 50, phrases.pick(phrases.MIRROR_DIGITS_PHRASES, d=digits)
+    # Последовательность 123 / 321
+    if (nums[1] - nums[0] == 1 and nums[2] - nums[1] == 1) or (
+        nums[0] - nums[1] == 1 and nums[1] - nums[2] == 1
+    ):
+        return 35, phrases.pick(phrases.SEQUENCE_PHRASES, d=digits)
+    # Арифметическая прогрессия (шаг > 1)
+    if (nums[1] - nums[0]) == (nums[2] - nums[1]) and abs(nums[1] - nums[0]) > 0:
+        return 30, phrases.pick(phrases.PROGRESSION_PHRASES, d=digits)
+    # Все чётные или все нечётные
+    if all(n % 2 == 0 for n in nums) or all(n % 2 == 1 for n in nums):
+        return 25, phrases.pick(phrases.SAME_PARITY_PHRASES, d=digits)
+    # Две соседние одинаковые
+    if nums[0] == nums[1] or nums[1] == nums[2]:
+        return 20, phrases.pick(phrases.ADJACENT_PAIR_PHRASES, d=digits)
+    return None
 
-    # --- КАТЕГОРИЯ 3: точное совпадение example в plates_config ---
+
+def _letter_feature(letters):
+    """Очки и фраза по буквам (три одинаковые / зеркальные / парные). None если ничего."""
+    a, b, c = letters[0], letters[1], letters[2]
+    # Три одинаковые буквы
+    if a == b == c:
+        return phrases.TRIPLE_LETTERS_POINTS, phrases.pick(
+            phrases.TRIPLE_LETTERS_PHRASES, l=letters
+        )
+    # Зеркальные буквы (первая = последняя, средняя другая)
+    if a == c and a != b:
+        return 50, phrases.pick(phrases.MIRROR_LETTERS_PHRASES, a=a, b=c)
+    # Парные буквы на хвосте
+    if b == c:
+        return 30, phrases.pick(phrases.PAIR_LETTERS_PHRASES, l=letters)
+    return None
+
+
+def calculate_plate(plate):
+    """Возвращает (очки, фраза). Приоритет:
+
+    1) точное совпадение из plates_config.py;
+    2) спец-комбинации цифр и/или букв (включая «комбо»);
+    3) обобщённые шаблоны цифр/букв со случайной фразой;
+    4) обычный номер.
+    """
+    digits = plate[1:4]
+    nums = [int(d) for d in digits]
+    letters = plate[0] + plate[4] + plate[5]
+
+    # 1) Точное совпадение примера в конфиге
     for combo in license_plates:
         if combo["example"] == plate:
             return combo["points_total"], combo["phrase"]
 
-    # --- КАТЕГОРИЯ 2: 8 проверок в порядке приоритета ---
+    # 2) Точечные спец-комбинации цифр и букв
+    digit_special = phrases.DIGIT_SPECIALS.get(digits)
+    letter_special = phrases.LETTER_SPECIALS.get(letters)
 
-    # 1) Две соседние цифры одинаковые (пример A122BC)
-    if nums[0] == nums[1] or nums[1] == nums[2]:
-        return 20, f"{digits} — две одинаковые цифры рядом."
+    if digit_special and letter_special:
+        d_pts, d_phr = digit_special[0], random.choice(digit_special[1])
+        l_pts, l_phr = letter_special[0], random.choice(letter_special[1])
+        return d_pts + l_pts + 50, f"💥 Комбо! {d_phr} И сверху {l_phr}"
+    if digit_special:
+        return digit_special[0], random.choice(digit_special[1])
+    if letter_special:
+        return letter_special[0], random.choice(letter_special[1])
 
-    # 2) Две зеркальные цифры (палиндром вокруг центра, B181HE)
-    if digits[0] == digits[2] and digits[0] != digits[1]:
-        return 50, f"{digits} — зеркальный набор цифр."
+    # 3) Обобщённые шаблоны: пробуем цифры, затем буквы (берём что выгоднее)
+    df = _digit_feature(digits, nums)
+    lf = _letter_feature(letters)
+    if df and lf:
+        # комбинируем, если сработали оба независимых признака
+        return df[0] + lf[0], f"{df[1]} К тому же {lf[1].lower()}"
+    if df:
+        return df
+    if lf:
+        return lf
 
-    # 3) Две зеркальные буквы (М345ВМ)
-    if plate[0] == plate[4] and plate[0] != plate[5]:
-        return 50, f"{plate[0]}…{plate[4]} — зеркальные буквы."
-
-    # 4) Три одинаковые цифры (C333CT)
-    if nums[0] == nums[1] == nums[2]:
-        return 100, f"{digits} — три одинаковые цифры!"
-
-    # 5) Три одинаковые буквы (A761AA)
-    if plate[4] == plate[5] == plate[0]:
-        return 100, f"{plate[4]} — три одинаковые буквы!"
-
-    # 6) Арифметическая прогрессия цифр (K246KT)
-    if (nums[1] - nums[0]) == (nums[2] - nums[1]) and abs(nums[1] - nums[0]) > 0:
-        return 30, f"{digits} — цифры в арифметической прогрессии."
-
-    # 7) Все чётные или все нечётные цифры (P864PR)
-    if all(n % 2 == 0 for n in nums) or all(n % 2 == 1 for n in nums):
-        return 25, f"{digits} — все цифры одной чётности."
-
-    # 8) Последовательность 123 или 321 (E123EB)
-    if (nums[1] - nums[0] == 1 and nums[2] - nums[1] == 1) \
-        or (nums[0] - nums[1] == 1 and nums[1] - nums[2] == 1):
-            return 35, f"{digits} — цифры идут подряд."
-
-    # --- КАТЕГОРИЯ 1: обычный номер без фич ---
-    return 15, "Обычный номерок, без понтов."
+    # 4) Обычный номер
+    return 15, random.choice(phrases.ORDINARY_PHRASES)
 
 # --- Хендлеры ---
-def _is_public_https(url: str) -> bool:
-    # Telegram WebApp buttons require a valid public HTTPS URL.
-    if not url.startswith("https://"):
-        return False
-    host = url.split("://", 1)[1].split("/", 1)[0]
-    return not (host.startswith(("10.", "127.", "192.168.", "172.")) or "localhost" in host)
-
-
 def _app_keyboard() -> InlineKeyboardMarkup | None:
     rows = []
-    if _is_public_https(MINI_APP_URL):
+    if MINI_APP_URL:
         rows.append([InlineKeyboardButton("📱 Mini App", web_app=WebAppInfo(url=MINI_APP_URL))])
-    if _is_public_https(MAX_APP_URL):
+    if MAX_APP_URL:
         rows.append([InlineKeyboardButton("MAX", url=MAX_APP_URL)])
     return InlineKeyboardMarkup(rows) if rows else None
 
@@ -155,16 +181,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat_id = update.effective_chat.id
     save_player(user.id, user.username, chat_id)
-    text = (
+    await update.message.reply_text(
         "🚓 Добрый день, предъявите документы!\n"
         "📄 Жми /number, чтобы получить номерной знак.\n"
-        "ℹ️ Или введи /help, чтобы посмотреть все команды."
+        "ℹ️ Или введи /help, чтобы посмотреть все команды.",
+        reply_markup=_app_keyboard(),
     )
-    try:
-        await update.message.reply_text(text, reply_markup=_app_keyboard())
-    except Exception:
-        # Never let an invalid inline button (e.g. non-HTTPS WebApp URL) swallow /start.
-        await update.message.reply_text(text)
 
 async def number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
