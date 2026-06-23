@@ -9,10 +9,11 @@
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">AI Server</p>
+      <p class="eyebrow">AI Server · v0.2</p>
       <h1>Control Room</h1>
     </div>
     <div class="toolbar">
+      <a class="btn-link" href="http://10.8.0.1:8170" target="_blank" rel="noreferrer">Bots Hub</a>
       <span id="authState" class="pill warn">checking auth</span>
       <input id="loginPassword" type="password" placeholder="Control password" autocomplete="current-password">
       <button id="login" title="Start admin session">Login</button>
@@ -42,6 +43,7 @@
           <button data-action="telegram-set-commands" title="Update Telegram commands">Telegram Commands</button>
           <button data-action="poker-reset-sessions" title="Clear poker sessions">Reset Sessions</button>
           <button data-action="poker-qa" title="Run poker QA">Poker QA</button>
+          <button data-action="bots-platform-deploy" title="Deploy CB Balloons, Autobot and Hub">Deploy Bots</button>
         </div>
         <pre id="actionOutput" class="terminal small"></pre>
       </div>
@@ -59,8 +61,10 @@
       <div class="panel">
         <div class="panel-head">
           <h2>GitHub Sync</h2>
+          <span id="githubState"></span>
         </div>
         <div id="projects" class="stack"></div>
+        <div id="githubRepos" class="stack"></div>
       </div>
       <div class="panel">
         <div class="panel-head">
@@ -68,6 +72,13 @@
         </div>
         <div id="poker" class="stack"></div>
       </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>All Bots Health</h2>
+      </div>
+      <div id="allBotsHealth" class="stack"></div>
     </section>
 
     <section class="panel">

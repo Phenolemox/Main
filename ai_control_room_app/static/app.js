@@ -139,6 +139,16 @@ function render(data) {
     </div>
   `).join("");
 
+  const gh = data.github || {};
+  $("githubState").innerHTML = pill(gh.ok, gh.ok ? "gh connected" : "gh offline");
+  $("githubRepos").innerHTML = (gh.repos || []).map((repo) => `
+    <div class="row">
+      <strong>${esc(repo.name)}</strong>
+      <p class="muted">${esc(repo.updatedAt || "")}</p>
+      <a href="${esc(repo.url)}" target="_blank" rel="noreferrer">${esc(repo.url)}</a>
+    </div>
+  `).join("") || `<p class="muted">GitHub repos unavailable</p>`;
+
   $("poker").innerHTML = data.health
     .filter((h) => h.name.startsWith("poker"))
     .map((h) => `
@@ -153,12 +163,33 @@ function render(data) {
   $("botCount").textContent = `${bots.length} registered`;
   $("bots").innerHTML = bots.map((bot) => `
     <div class="card">
-      <div>${esc(bot.name)}</div>
+      <div>${esc(bot.emoji || "🤖")} ${esc(bot.name)}</div>
       <p class="muted">${esc(bot.repo)}</p>
       <p>${pill(bot.admin_api_configured, bot.admin_api_configured ? "admin connected" : "admin token missing")}</p>
       <p class="muted">${esc(bot.api)}</p>
+      <div class="bot-links">
+        ${bot.miniapp ? `<a href="${esc(bot.miniapp)}" target="_blank" rel="noreferrer">Mini App</a>` : ""}
+        ${bot.telegram ? `<a href="${esc(bot.telegram)}" target="_blank" rel="noreferrer">Telegram</a>` : ""}
+        <a href="#" data-load-bot-admin="${esc(bot.id)}">Admin</a>
+      </div>
     </div>
   `).join("");
+
+  $("allBotsHealth").innerHTML = data.health.map((h) => `
+    <div class="row">
+      <strong>${esc(h.name)}</strong>
+      <p>${pill(h.result.ok, h.result.ok ? "ok" : "error")} <span class="muted">${h.result.latency_ms || 0} ms</span></p>
+    </div>
+  `).join("");
+
+  document.querySelectorAll("[data-load-bot-admin]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      loadGenericBotAdmin(link.dataset.loadBotAdmin).catch((err) => {
+        $("pokerAdminOutput").textContent = String(err);
+      });
+    });
+  });
 
   $("panels").innerHTML = data.panels.map((p) => `
     <a href="${esc(p.url)}" target="_blank" rel="noreferrer">
@@ -201,6 +232,15 @@ async function runAction(action) {
 
 function settingId(key) {
   return `setting-${key.replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
+async function loadGenericBotAdmin(botId) {
+  if (botId === "poker-bot") {
+    return loadPokerAdmin();
+  }
+  $("pokerAdminOutput").textContent = `Loading ${botId} admin...`;
+  const data = await fetchJson(`/api/bots/${encodeURIComponent(botId)}/admin`, {headers: tokenHeaders()});
+  $("pokerAdminOutput").textContent = JSON.stringify(data, null, 2);
 }
 
 async function loadPokerAdmin() {

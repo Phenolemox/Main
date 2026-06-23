@@ -85,10 +85,23 @@ textarea {
   font: 12px/1.45 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
 }
 
-button {
+.button, .btn-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
   padding: 0 14px;
-  cursor: pointer;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
 }
+
+.btn-link:hover { border-color: var(--accent); color: var(--accent); }
+
+.bot-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.bot-links a { color: var(--accent-2); font-size: 12px; }
 
 button:hover { border-color: var(--accent); }
 button:disabled { cursor: not-allowed; opacity: 0.45; }

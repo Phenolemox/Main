@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 
 APP_NAME = "ai-control-room"
+APP_VERSION = "0.2.0"
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONTROL_TOKEN = os.getenv("CONTROL_ROOM_TOKEN", "").strip()
@@ -37,7 +38,10 @@ SERVICES = [
     "ai-agent-api",
     "ai-mcp-bridge",
     "ai-control-room",
+    "bots-hub",
     "poker-bot",
+    "cb-balloons-bot",
+    "autobot-bot",
     "poker-redis",
     "redis-server",
     "docker",
@@ -52,6 +56,24 @@ PROJECTS = [
         "app_path": "/opt/apps/poker-bot",
         "repo": "Phenolemox/poker-bot",
     },
+    {
+        "name": "cb-balloons-bot",
+        "repo_path": "/opt/repos/Main",
+        "app_path": "/opt/apps/cb-balloons-bot",
+        "repo": "Phenolemox/Main",
+    },
+    {
+        "name": "autobot-bot",
+        "repo_path": "/opt/repos/Main",
+        "app_path": "/opt/apps/autobot-bot",
+        "repo": "Phenolemox/Main",
+    },
+    {
+        "name": "bots-hub",
+        "repo_path": "/opt/repos/Main",
+        "app_path": "/opt/apps/bots-hub",
+        "repo": "Phenolemox/Main",
+    },
 ]
 
 HEALTH_ENDPOINTS = [
@@ -59,24 +81,63 @@ HEALTH_ENDPOINTS = [
     {"name": "poker-bot", "url": "http://10.8.0.1:8140/health"},
     {"name": "poker-ready", "url": "http://10.8.0.1:8140/ready"},
     {"name": "poker-sessions", "url": "http://10.8.0.1:8140/ops/sessions"},
+    {"name": "cb-balloons-bot", "url": "http://10.8.0.1:8160/health"},
+    {"name": "cb-balloons-ready", "url": "http://10.8.0.1:8160/ready"},
+    {"name": "autobot-bot", "url": "http://10.8.0.1:8161/health"},
+    {"name": "autobot-ready", "url": "http://10.8.0.1:8161/ready"},
+    {"name": "bots-hub", "url": "http://10.8.0.1:8170/health"},
+    {"name": "control-room", "url": "http://10.8.0.1:8150/health"},
 ]
 
 BOTS = [
     {
         "id": "poker-bot",
         "name": "MyPoker",
+        "emoji": "🃏",
         "service": "poker-bot",
         "repo": "Phenolemox/poker-bot",
         "api": "http://10.8.0.1:8140",
+        "miniapp": "http://10.8.0.1:8140/miniapp",
+        "telegram": "https://t.me/mypokerbotofficial_bot",
         "admin_api_configured": bool(POKER_ADMIN_TOKEN),
-    }
+        "admin_kind": "poker",
+    },
+    {
+        "id": "cb-balloons-bot",
+        "name": "CB Balloons",
+        "emoji": "🎈",
+        "service": "cb-balloons-bot",
+        "repo": "Phenolemox/Main",
+        "api": "http://10.8.0.1:8160",
+        "miniapp": "http://10.8.0.1:8160/miniapp",
+        "telegram": "https://t.me/CB_Balloonsbot",
+        "admin_api_configured": bool(os.getenv("CB_BALLOONS_ADMIN_TOKEN", "").strip()),
+        "admin_kind": "generic",
+        "admin_path": "/admin/summary",
+    },
+    {
+        "id": "autobot-bot",
+        "name": "Autobot",
+        "emoji": "🚓",
+        "service": "autobot-bot",
+        "repo": "Phenolemox/Main",
+        "api": "http://10.8.0.1:8161",
+        "miniapp": "http://10.8.0.1:8161/miniapp",
+        "telegram": "https://t.me/Inspectorauto_bot",
+        "admin_api_configured": bool(os.getenv("AUTOBOT_ADMIN_TOKEN", "").strip()),
+        "admin_kind": "generic",
+        "admin_path": "/admin/summary",
+    },
 ]
 
 ALLOWED_LOGS = {
     "ai-agent-api",
     "ai-mcp-bridge",
     "ai-control-room",
+    "bots-hub",
     "poker-bot",
+    "cb-balloons-bot",
+    "autobot-bot",
     "poker-redis",
 }
 
@@ -85,10 +146,11 @@ ACTION_COMMANDS = {
     "poker-reset-sessions": ["/home/admin/bin/poker-reset-sessions"],
     "telegram-set-commands": ["/home/admin/bin/telegram-set-commands"],
     "poker-qa": ["/home/admin/bin/poker-qa"],
+    "bots-platform-deploy": ["/home/admin/bin/bots-platform-deploy"],
 }
 
 
-app = FastAPI(title="AI Control Room", version="0.1.0")
+app = FastAPI(title="AI Control Room", version=APP_VERSION)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -296,6 +358,46 @@ def app_dirs() -> list[str]:
     return sorted(p.name for p in root.iterdir() if p.is_dir())
 
 
+def github_state() -> dict[str, Any]:
+    auth = run(["gh", "auth", "status", "-h", "github.com"], timeout=8)
+    repos = run(["gh", "repo", "list", "Phenolemox", "--limit", "20", "--json", "name,updatedAt,url"], timeout=12)
+    items: list[Any] = []
+    if repos["ok"]:
+        try:
+            items = json.loads(repos["stdout"] or "[]")
+        except Exception:
+            items = []
+    return {
+        "ok": auth["ok"],
+        "authenticated": auth["ok"],
+        "repos": items[:12],
+        "raw_status": auth["stdout"][:400] if auth["ok"] else auth["stderr"][:400],
+    }
+
+
+def generic_bot_admin_request(bot_id: str) -> dict[str, Any]:
+    token_map = {
+        "cb-balloons-bot": os.getenv("CB_BALLOONS_ADMIN_TOKEN", "").strip(),
+        "autobot-bot": os.getenv("AUTOBOT_ADMIN_TOKEN", "").strip(),
+    }
+    base_map = {
+        "cb-balloons-bot": "http://10.8.0.1:8160",
+        "autobot-bot": "http://10.8.0.1:8161",
+    }
+    token = token_map.get(bot_id, "")
+    base = base_map.get(bot_id, "")
+    if not token or not base:
+        raise HTTPException(status_code=503, detail=f"admin token not configured for {bot_id}")
+    result = request_json(
+        f"{base}/admin/summary",
+        headers={"X-Admin-Token": token},
+        timeout=10,
+    )
+    if not result["ok"]:
+        raise HTTPException(status_code=result.get("status") or 502, detail=result.get("body") or "bot admin error")
+    return result["body"]
+
+
 def port_snapshot() -> list[str]:
     output = run(["ss", "-ltnp"], timeout=8)["stdout"].splitlines()
     return [line for line in output if "10.8.0.1" in line][:80]
@@ -420,6 +522,9 @@ def summary():
         "backups": latest_backups(),
         "write_actions_configured": bool(CONTROL_TOKEN),
         "poker_admin_configured": bool(POKER_ADMIN_TOKEN),
+        "github": github_state(),
+        "hub_url": "http://10.8.0.1:8170",
+        "version": APP_VERSION,
     }
 
 
@@ -435,6 +540,19 @@ def bots():
             for bot in BOTS
         ]
     }
+
+
+@app.get("/api/github")
+def github():
+    return github_state()
+
+
+@app.get("/api/bots/{bot_id}/admin")
+def bot_admin(bot_id: str, request: FastAPIRequest, x_control_room_token: str | None = Header(default=None)):
+    require_action_auth(request, x_control_room_token)
+    if bot_id == "poker-bot":
+        raise HTTPException(status_code=400, detail="use /api/poker-admin for poker-bot")
+    return generic_bot_admin_request(bot_id)
 
 
 @app.get("/api/poker-admin")
@@ -503,7 +621,7 @@ def action(action: str, request: FastAPIRequest, x_control_room_token: str | Non
     require_action_auth(request, x_control_room_token)
     if action not in ACTION_COMMANDS:
         raise HTTPException(status_code=404, detail="unknown action")
-    timeout = 300 if action in {"backup", "poker-qa"} else 60
+    timeout = 300 if action in {"backup", "poker-qa", "bots-platform-deploy"} else 60
     result = run(ACTION_COMMANDS[action], timeout=timeout)
     status = 200 if result["ok"] else 500
     return JSONResponse(result, status_code=status)
