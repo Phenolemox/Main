@@ -1,6 +1,6 @@
-const tg = window.Telegram?.WebApp;
-tg?.ready();
-tg?.expand();
+const mini = window.MiniApp || {
+  name: "web", ready() {}, expand() {}, haptic() {}, popup() {}, openBot() {}, label() { return "Web Mini App"; },
+};
 
 const COLORS = [
   { id: "blue", label: "🔵", score: 10 },
@@ -47,7 +47,7 @@ function pick(color, number) {
   round += 1;
   if (round <= 5) {
     roundLabel.textContent = `Раунд ${round}`;
-    tg?.HapticFeedback?.impactOccurred("light");
+    mini.haptic("light");
     return;
   }
   const score = picks.reduce((sum, item) => sum + item.score, 0) + (new Set(picks.map((p) => p.id)).size >= 4 ? 20 : 0);
@@ -55,7 +55,7 @@ function pick(color, number) {
   resultText.textContent = `Вы выбрали ${picks.map((p) => p.label).join(" ")}`;
   resultDetail.textContent = "Полная игра с триплетами и достижениями доступна в Telegram-боте.";
   show("result");
-  tg?.showPopup?.({ title: "CB Balloons", message: `Счёт демо: ${score}` });
+  mini.popup({ title: "CB Balloons", message: `Счёт демо: ${score}` });
 }
 
 document.getElementById("btn-start").addEventListener("click", () => {
@@ -69,9 +69,7 @@ document.getElementById("btn-start").addEventListener("click", () => {
 document.getElementById("btn-again").addEventListener("click", () => show("start"));
 
 document.getElementById("btn-bot").addEventListener("click", () => {
-  if (tg?.openTelegramLink) {
-    tg.openTelegramLink("https://t.me/");
-  }
+  mini.openBot("https://t.me/CB_Balloonsbot", "https://max.ru/CB_Balloonsbot");
 });
 
-platformBadge.textContent = tg?.platform ? `Telegram Mini App · ${tg.platform}` : "Web Mini App";
+platformBadge.textContent = mini.label();

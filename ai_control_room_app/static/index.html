@@ -1,215 +1,52 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Control Room</title>
+  <title>AI Control Room v0.3</title>
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">AI Server · v0.2</p>
-      <h1>Control Room</h1>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">AI</div>
+        <div>
+          <div class="brand-title">Control Room</div>
+          <div class="brand-sub">v0.3 · ai-alliance.pro</div>
+        </div>
+      </div>
+
+      <nav class="tree" id="tree">
+        <!-- folders injected by app.js -->
+      </nav>
+
+      <div class="sidebar-foot">
+        <span id="authDot" class="dot warn"></span>
+        <span id="authLabel">проверка…</span>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menuToggle" title="Меню">☰</button>
+        <div class="crumbs" id="crumbs">Сервер</div>
+        <div class="topbar-actions">
+          <span id="authState" class="pill warn">checking</span>
+          <input id="loginPassword" type="password" placeholder="Control password" autocomplete="current-password">
+          <button id="login" class="btn">Войти</button>
+          <button id="logout" class="btn ghost hidden">Выйти</button>
+          <button id="refresh" class="btn ghost" title="Обновить">⟳</button>
+        </div>
+      </header>
+
+      <main class="content" id="content">
+        <div class="loading">Загрузка панели…</div>
+      </main>
     </div>
-    <div class="toolbar">
-      <a class="btn-link" href="http://10.8.0.1:8170" target="_blank" rel="noreferrer">Bots Hub</a>
-      <span id="authState" class="pill warn">checking auth</span>
-      <input id="loginPassword" type="password" placeholder="Control password" autocomplete="current-password">
-      <button id="login" title="Start admin session">Login</button>
-      <button id="logout" class="hidden" title="End admin session">Logout</button>
-      <button id="refresh" title="Refresh">Refresh</button>
-    </div>
-  </header>
+  </div>
 
-  <main>
-    <section class="status-strip" id="statusStrip"></section>
-
-    <section class="grid two">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Server</h2>
-          <span id="generatedAt"></span>
-        </div>
-        <pre id="serverState" class="terminal"></pre>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Actions</h2>
-          <span id="actionState"></span>
-        </div>
-        <div class="actions">
-          <button data-action="backup" title="Run server backup">Backup</button>
-          <button data-action="telegram-set-commands" title="Update Telegram commands">Telegram Commands</button>
-          <button data-action="poker-reset-sessions" title="Clear poker sessions">Reset Sessions</button>
-          <button data-action="poker-qa" title="Run poker QA">Poker QA</button>
-          <button data-action="bots-platform-deploy" title="Deploy CB Balloons, Autobot and Hub">Deploy Bots</button>
-        </div>
-        <pre id="actionOutput" class="terminal small"></pre>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Managed Services</h2>
-        <span id="serviceCount"></span>
-      </div>
-      <div class="cards" id="services"></div>
-    </section>
-
-    <section class="grid two">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>GitHub Sync</h2>
-          <span id="githubState"></span>
-        </div>
-        <div id="projects" class="stack"></div>
-        <div id="githubRepos" class="stack"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Poker Bot</h2>
-        </div>
-        <div id="poker" class="stack"></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>All Bots Health</h2>
-      </div>
-      <div id="allBotsHealth" class="stack"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Bot Registry</h2>
-        <span id="botCount"></span>
-      </div>
-      <div class="cards" id="bots"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Poker Admin</h2>
-        <div class="inline-actions">
-          <span id="pokerAdminState"></span>
-          <button id="loadPokerAdmin" title="Load protected poker admin data">Load</button>
-        </div>
-      </div>
-      <div class="admin-grid">
-        <div>
-          <h3>Score Adjust</h3>
-          <div class="form-grid">
-            <input id="scoreUserId" type="number" min="1" placeholder="User ID">
-            <input id="scoreDelta" type="number" placeholder="Delta">
-            <select id="scoreScope">
-              <option value="global">global</option>
-              <option value="duel">duel</option>
-              <option value="chat">chat</option>
-            </select>
-            <input id="scoreChatId" type="number" min="1" placeholder="Chat ID optional">
-            <input id="scoreReason" placeholder="Reason" value="control_room_adjust">
-            <button id="adjustScore">Apply</button>
-          </div>
-        </div>
-        <div>
-          <h3>Score Reset</h3>
-          <div class="form-grid">
-            <select id="resetScope">
-              <option value="">all scopes</option>
-              <option value="global">global</option>
-              <option value="duel">duel</option>
-              <option value="chat">chat</option>
-            </select>
-            <input id="resetUserId" type="number" min="1" placeholder="User ID optional">
-            <input id="resetChatId" type="number" min="1" placeholder="Chat ID optional">
-            <input id="resetReason" placeholder="Reason" value="control_room_reset">
-            <button id="resetScores">Reset</button>
-          </div>
-        </div>
-        <div>
-          <h3>Attempts Grant</h3>
-          <div class="form-grid">
-            <input id="attemptGrantUserId" type="number" min="1" placeholder="User ID">
-            <input id="attemptGrantAmount" type="number" min="1" max="10000" value="1" placeholder="Amount">
-            <select id="attemptGrantScope">
-              <option value="private">private</option>
-              <option value="chat">chat</option>
-            </select>
-            <input id="attemptGrantChatId" type="number" min="1" placeholder="Chat ID for chat">
-            <input id="attemptGrantDay" placeholder="YYYY-MM-DD optional">
-            <input id="attemptGrantReason" placeholder="Reason" value="control_room_attempt_grant">
-            <button id="grantAttempts">Grant</button>
-          </div>
-        </div>
-        <div>
-          <h3>Attempts Reset</h3>
-          <div class="form-grid">
-            <select id="attemptResetScope">
-              <option value="">all attempt scopes</option>
-              <option value="private">private</option>
-              <option value="chat">chat</option>
-            </select>
-            <input id="attemptResetUserId" type="number" min="1" placeholder="User ID optional">
-            <input id="attemptResetChatId" type="number" min="1" placeholder="Chat ID optional">
-            <input id="attemptResetDay" placeholder="YYYY-MM-DD default today">
-            <input id="attemptResetReason" placeholder="Reason" value="control_room_attempt_reset">
-            <button id="resetAttempts">Reset Attempts</button>
-          </div>
-        </div>
-      </div>
-      <div class="status-strip compact" id="pokerAdminSummary"></div>
-      <div class="grid two">
-        <div class="admin-block">
-          <div class="panel-head"><h3>Users</h3></div>
-          <div class="table-wrap"><table id="pokerUsers"></table></div>
-        </div>
-        <div class="admin-block">
-          <div class="panel-head"><h3>Attempts Today</h3></div>
-          <div class="table-wrap"><table id="pokerAttempts"></table></div>
-        </div>
-      </div>
-      <div class="grid two">
-        <div class="admin-block">
-          <div class="panel-head"><h3>Leaderboards</h3></div>
-          <div id="pokerLeaderboards" class="stack"></div>
-        </div>
-        <div class="admin-block">
-          <div class="panel-head"><h3>Settings</h3></div>
-          <div id="pokerSettings" class="stack"></div>
-        </div>
-        <div class="admin-block">
-          <div class="panel-head"><h3>Audit</h3></div>
-          <div id="pokerAudit" class="stack"></div>
-        </div>
-      </div>
-      <pre id="pokerAdminOutput" class="terminal small"></pre>
-    </section>
-
-    <section class="grid two">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Panels</h2>
-        </div>
-        <div class="links" id="panels"></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Backups</h2>
-        </div>
-        <div id="backups" class="stack"></div>
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Ports</h2>
-      </div>
-      <pre id="ports" class="terminal"></pre>
-    </section>
-  </main>
-
+  <div id="toast" class="toast hidden"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

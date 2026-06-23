@@ -1,6 +1,6 @@
-const tg = window.Telegram?.WebApp;
-tg?.ready();
-tg?.expand();
+const mini = window.MiniApp || {
+  name: "web", ready() {}, expand() {}, haptic() {}, close() {}, popup() {}, openBot() {}, label() { return "Web Mini App"; },
+};
 
 const letters = "АВЕКМНОРСТУХ";
 
@@ -31,9 +31,9 @@ document.getElementById("roll").addEventListener("click", () => {
   plateEl.textContent = plate;
   phraseEl.textContent = phrase;
   pointsEl.textContent = String(points);
-  tg?.HapticFeedback?.impactOccurred("medium");
+  mini.haptic("medium");
 });
 
 document.getElementById("open-bot").addEventListener("click", () => {
-  tg?.close?.();
+  mini.openBot("https://t.me/Inspectorauto_bot", "https://max.ru/Inspectorauto_bot");
 });

@@ -9,20 +9,15 @@ function esc(value) {
 }
 
 async function loadBots() {
+  // Health is computed server-side (hub queries internal URLs and returns status).
+  // The browser only ever talks to same-origin /api/bots over HTTPS.
   const data = await fetchJson("/api/bots");
   const botsEl = document.getElementById("bots");
   const statsEl = document.getElementById("stats");
-  let online = 0;
 
   botsEl.innerHTML = "";
   for (const bot of data.items) {
-    let health = { status: "unknown" };
-    try {
-      health = await fetchJson(bot.health_url);
-      if (health.status === "healthy") online += 1;
-    } catch (_err) {
-      health = { status: "offline" };
-    }
+    const online = bot.health && bot.health.online;
     const card = document.createElement("article");
     card.className = "bot-card";
     card.innerHTML = `
@@ -30,23 +25,25 @@ async function loadBots() {
         <div class="emoji">${esc(bot.emoji)}</div>
         <div>
           <h2>${esc(bot.name)}</h2>
-          <div class="status ${health.status === "healthy" ? "good" : "bad"}">${health.status === "healthy" ? "online" : "offline"}</div>
+          <div class="status ${online ? "good" : "bad"}">${online ? "online" : "offline"}</div>
         </div>
       </div>
       <p class="desc">${esc(bot.description)}</p>
       <div class="links">
         <a href="${esc(bot.miniapp_url)}" target="_blank" rel="noopener">Mini App</a>
+        <a href="${esc(bot.miniapp_url)}?platform=max" target="_blank" rel="noopener">MAX</a>
         <a href="${esc(bot.telegram)}" target="_blank" rel="noopener">Telegram</a>
-        <a href="${esc(bot.health_url)}" target="_blank" rel="noopener">Health</a>
+        <a href="${esc(bot.public)}/health" target="_blank" rel="noopener">Health</a>
       </div>`;
     botsEl.appendChild(card);
   }
 
   statsEl.innerHTML = `
-    <div class="stat"><div class="num">${data.items.length}</div><div class="label">ботов</div></div>
-    <div class="stat"><div class="num">${online}</div><div class="label">online</div></div>
-    <div class="stat"><div class="num">${data.items.length - online}</div><div class="label">offline</div></div>`;
+    <div class="stat"><div class="num">${data.total}</div><div class="label">ботов</div></div>
+    <div class="stat"><div class="num">${data.online}</div><div class="label">online</div></div>
+    <div class="stat"><div class="num">${data.offline}</div><div class="label">offline</div></div>`;
 }
 
 document.getElementById("refresh").addEventListener("click", () => loadBots().catch(console.error));
 loadBots().catch(console.error);
+setInterval(() => loadBots().catch(console.error), 30000);

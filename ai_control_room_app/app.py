@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 
 APP_NAME = "ai-control-room"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 CONTROL_TOKEN = os.getenv("CONTROL_ROOM_TOKEN", "").strip()
@@ -23,6 +23,8 @@ SESSION_TTL_SECONDS = int(os.getenv("CONTROL_ROOM_SESSION_TTL_SECONDS", "43200")
 COOKIE_SECURE = os.getenv("CONTROL_ROOM_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes"}
 POKER_ADMIN_BASE_URL = os.getenv("POKER_ADMIN_BASE_URL", "http://10.8.0.1:8140").rstrip("/")
 POKER_ADMIN_TOKEN = os.getenv("POKER_ADMIN_TOKEN", "").strip()
+PUBLIC_DOMAIN = os.getenv("PUBLIC_DOMAIN", "ai-alliance.pro").strip()
+LOCAL_MIRROR_PATH = os.getenv("LOCAL_MIRROR_PATH", r"C:\\Нейросети\\Боты\\, local_bots_mirror/")
 
 PANELS = [
     {"name": "Homepage", "url": "http://10.8.0.1:3010", "kind": "dashboard"},
@@ -98,6 +100,9 @@ BOTS = [
         "repo": "Phenolemox/poker-bot",
         "api": "http://10.8.0.1:8140",
         "miniapp": "http://10.8.0.1:8140/miniapp",
+        "public": f"https://poker.{PUBLIC_DOMAIN}",
+        "public_miniapp": f"https://poker.{PUBLIC_DOMAIN}/miniapp",
+        "max_webhook": f"https://poker.{PUBLIC_DOMAIN}/webhooks/max",
         "telegram": "https://t.me/mypokerbotofficial_bot",
         "admin_api_configured": bool(POKER_ADMIN_TOKEN),
         "admin_kind": "poker",
@@ -110,6 +115,9 @@ BOTS = [
         "repo": "Phenolemox/Main",
         "api": "http://10.8.0.1:8160",
         "miniapp": "http://10.8.0.1:8160/miniapp",
+        "public": f"https://balloons.{PUBLIC_DOMAIN}",
+        "public_miniapp": f"https://balloons.{PUBLIC_DOMAIN}/miniapp",
+        "max_webhook": f"https://balloons.{PUBLIC_DOMAIN}/webhooks/max",
         "telegram": "https://t.me/CB_Balloonsbot",
         "admin_api_configured": bool(os.getenv("CB_BALLOONS_ADMIN_TOKEN", "").strip()),
         "admin_kind": "generic",
@@ -123,12 +131,17 @@ BOTS = [
         "repo": "Phenolemox/Main",
         "api": "http://10.8.0.1:8161",
         "miniapp": "http://10.8.0.1:8161/miniapp",
+        "public": f"https://autobot.{PUBLIC_DOMAIN}",
+        "public_miniapp": f"https://autobot.{PUBLIC_DOMAIN}/miniapp",
+        "max_webhook": f"https://autobot.{PUBLIC_DOMAIN}/webhooks/max",
         "telegram": "https://t.me/Inspectorauto_bot",
         "admin_api_configured": bool(os.getenv("AUTOBOT_ADMIN_TOKEN", "").strip()),
         "admin_kind": "generic",
         "admin_path": "/admin/summary",
     },
 ]
+
+TOGGLEABLE_SERVICES = {bot["service"] for bot in BOTS}
 
 ALLOWED_LOGS = {
     "ai-agent-api",
@@ -403,6 +416,181 @@ def port_snapshot() -> list[str]:
     return [line for line in output if "10.8.0.1" in line][:80]
 
 
+def _read_cpu_times() -> tuple[int, int] | None:
+    try:
+        with open("/proc/stat", "r", encoding="utf-8") as handle:
+            line = handle.readline()
+    except OSError:
+        return None
+    if not line.startswith("cpu "):
+        return None
+    parts = [int(x) for x in line.split()[1:]]
+    idle = parts[3] + (parts[4] if len(parts) > 4 else 0)
+    total = sum(parts)
+    return idle, total
+
+
+def cpu_percent(sample_seconds: float = 0.25) -> float | None:
+    first = _read_cpu_times()
+    if not first:
+        return None
+    time.sleep(sample_seconds)
+    second = _read_cpu_times()
+    if not second:
+        return None
+    idle_delta = second[0] - first[0]
+    total_delta = second[1] - first[1]
+    if total_delta <= 0:
+        return None
+    return round((1 - idle_delta / total_delta) * 100, 1)
+
+
+def memory_metrics() -> dict[str, Any]:
+    info: dict[str, int] = {}
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+            for line in handle:
+                key, _, rest = line.partition(":")
+                value = rest.strip().split()
+                if value and value[0].isdigit():
+                    info[key] = int(value[0])  # kB
+    except OSError:
+        return {}
+    total = info.get("MemTotal", 0)
+    available = info.get("MemAvailable", info.get("MemFree", 0))
+    used = max(total - available, 0)
+    percent = round(used / total * 100, 1) if total else None
+    return {
+        "total_mb": round(total / 1024),
+        "used_mb": round(used / 1024),
+        "available_mb": round(available / 1024),
+        "percent": percent,
+    }
+
+
+def disk_metrics() -> dict[str, Any]:
+    try:
+        usage = os.statvfs("/")
+    except OSError:
+        return {}
+    total = usage.f_blocks * usage.f_frsize
+    free = usage.f_bavail * usage.f_frsize
+    used = total - (usage.f_bfree * usage.f_frsize)
+    percent = round(used / total * 100, 1) if total else None
+    return {
+        "total_gb": round(total / 1024 ** 3, 1),
+        "used_gb": round(used / 1024 ** 3, 1),
+        "free_gb": round(free / 1024 ** 3, 1),
+        "percent": percent,
+    }
+
+
+def load_metrics() -> dict[str, Any]:
+    try:
+        load1, load5, load15 = os.getloadavg()
+    except (OSError, AttributeError):
+        return {}
+    cores = os.cpu_count() or 1
+    return {
+        "load1": round(load1, 2),
+        "load5": round(load5, 2),
+        "load15": round(load15, 2),
+        "cores": cores,
+        "load1_percent": round(min(load1 / cores * 100, 100), 1),
+    }
+
+
+def uptime_seconds() -> int | None:
+    try:
+        with open("/proc/uptime", "r", encoding="utf-8") as handle:
+            return int(float(handle.readline().split()[0]))
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def server_metrics() -> dict[str, Any]:
+    return {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "cpu_percent": cpu_percent(),
+        "memory": memory_metrics(),
+        "disk": disk_metrics(),
+        "load": load_metrics(),
+        "uptime_seconds": uptime_seconds(),
+    }
+
+
+def toggle_service(service: str, action: str) -> dict[str, Any]:
+    if service not in TOGGLEABLE_SERVICES:
+        raise HTTPException(status_code=404, detail="unknown or non-toggleable service")
+    if action not in {"start", "stop", "restart", "enable", "disable"}:
+        raise HTTPException(status_code=400, detail="invalid action")
+    result = run(["systemctl", action, service], timeout=30)
+    state = service_state(service)
+    if not result["ok"] and not (action in {"start", "restart"} and state["ok"]):
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "action": action,
+                "service": service,
+                "stderr": result["stderr"][:400] or result["stdout"][:400],
+                "hint": "systemctl auth — ensure polkit rule 49-bots-control.rules is installed",
+            },
+        )
+    return {"ok": True, "service": service, "action": action, "state": state}
+
+
+def max_platform_status() -> dict[str, Any]:
+    bots = []
+    for bot in BOTS:
+        env_prefix = {
+            "poker-bot": "MAX",
+            "cb-balloons-bot": "CB_BALLOONS_MAX",
+            "autobot-bot": "AUTOBOT_MAX",
+        }.get(bot["id"], "MAX")
+        token = (
+            os.getenv("MAX_BOT_TOKEN", "")
+            if bot["id"] == "poker-bot"
+            else os.getenv(f"{env_prefix}_BOT_TOKEN", "")
+        ).strip()
+        bots.append(
+            {
+                "id": bot["id"],
+                "name": bot["name"],
+                "emoji": bot["emoji"],
+                "webhook_url": bot["max_webhook"],
+                "miniapp_url": bot["public_miniapp"],
+                "bot_token_configured": bool(token),
+                "webhook_health": read_url(f"{bot['api']}/health"),
+            }
+        )
+    configured = sum(1 for b in bots if b["bot_token_configured"])
+    return {
+        "platform": "MAX",
+        "ready": configured == len(bots),
+        "configured_count": configured,
+        "total": len(bots),
+        "bots": bots,
+        "note": (
+            "Mini App работает в Telegram и MAX (dual-SDK). Для активации MAX-бота "
+            "добавьте MAX_BOT_TOKEN в /opt/secrets/bots-platform.env и зарегистрируйте webhook."
+        ),
+    }
+
+
+def local_sync_status() -> dict[str, Any]:
+    return {
+        "mirror_paths": [p.strip() for p in LOCAL_MIRROR_PATH.split(",") if p.strip()],
+        "workspace": "C:/Users/xafiz/OneDrive/Documents/Сервер проект",
+        "repos": ["Phenolemox/Main", "Phenolemox/poker-bot"],
+        "server_repo_main": git_state("/opt/repos/Main"),
+        "server_repo_poker": git_state("/opt/repos/poker-bot"),
+        "note": (
+            "Локальное зеркало синхронизируется через GitHub (Main и poker-bot). "
+            "Локальный ПК не имеет публичного endpoint — статус отражает серверные репозитории."
+        ),
+    }
+
+
 def make_session_cookie(now: int | None = None) -> str:
     if not CONTROL_TOKEN:
         raise HTTPException(status_code=403, detail="CONTROL_ROOM_TOKEN is not configured")
@@ -512,6 +700,7 @@ def summary():
     return {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "server": filesystem_state(),
+        "metrics": server_metrics(),
         "services": [service_state(name) for name in SERVICES],
         "projects": projects,
         "health": healths,
@@ -523,7 +712,10 @@ def summary():
         "write_actions_configured": bool(CONTROL_TOKEN),
         "poker_admin_configured": bool(POKER_ADMIN_TOKEN),
         "github": github_state(),
-        "hub_url": "http://10.8.0.1:8170",
+        "max": max_platform_status(),
+        "local": local_sync_status(),
+        "public_domain": PUBLIC_DOMAIN,
+        "hub_url": f"https://bots.{PUBLIC_DOMAIN}",
         "version": APP_VERSION,
     }
 
@@ -545,6 +737,36 @@ def bots():
 @app.get("/api/github")
 def github():
     return github_state()
+
+
+@app.get("/api/server/metrics")
+def api_server_metrics():
+    return server_metrics()
+
+
+@app.get("/api/max/status")
+def api_max_status():
+    return max_platform_status()
+
+
+@app.get("/api/local/sync-status")
+def api_local_sync():
+    return local_sync_status()
+
+
+@app.post("/api/bots/{bot_id}/toggle")
+def api_bot_toggle(
+    bot_id: str,
+    payload: dict[str, Any],
+    request: FastAPIRequest,
+    x_control_room_token: str | None = Header(default=None),
+):
+    require_action_auth(request, x_control_room_token)
+    bot = next((b for b in BOTS if b["id"] == bot_id), None)
+    if not bot:
+        raise HTTPException(status_code=404, detail="unknown bot")
+    action = str(payload.get("action") or "").strip().lower()
+    return toggle_service(bot["service"], action)
 
 
 @app.get("/api/bots/{bot_id}/admin")
