@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phenolemox Bots Hub</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="bg"></div>
+  <header class="hero">
+    <p class="eyebrow">AI Server Amsterdam</p>
+    <h1>Phenolemox Bots Hub</h1>
+    <p class="lead">Telegram и MAX боты с Mini App, админкой и мониторингом на собственном сервере</p>
+    <div class="hero-actions">
+      <a class="btn primary" href="http://127.0.0.1:8150" id="admin-link">Control Room</a>
+      <button class="btn ghost" id="refresh">Обновить статус</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stats" id="stats"></section>
+    <section class="grid" id="bots"></section>
+    <section class="panel">
+      <h2>Инфраструктура</h2>
+      <div class="infra" id="infra">
+        <div class="tile"><span>GitHub</span><strong>Phenolemox/Main</strong></div>
+        <div class="tile"><span>Monitoring</span><strong>Netdata · Gatus · Dozzle</strong></div>
+        <div class="tile"><span>Backups</span><strong>Daily 04:30 UTC</strong></div>
+        <div class="tile"><span>Server</span><strong>5.129.229.170</strong></div>
+      </div>
+    </section>
+  </main>
+  <footer>© Phenolemox · Secure internal deployment · Tokens never in Git</footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

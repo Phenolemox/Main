@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Autobot</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/miniapp/styles.css"/>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <p class="eyebrow">ГИБДД Simulator</p>
+      <h1>🚓 Autobot</h1>
+      <p class="muted">Генератор номерных знаков с очками и обменом</p>
+    </header>
+    <div class="plate" id="plate">A000AA</div>
+    <p id="phrase" class="phrase">Нажми «Новый номер»</p>
+    <div class="score">+<span id="points">0</span> очков</div>
+    <button id="roll" class="btn">Новый номер</button>
+    <button id="open-bot" class="btn ghost">Полная игра в боте</button>
+  </div>
+  <script src="/static/miniapp/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+---
+version: null
+meta:
+  environment: python
+  toolchain:
+    name: pip
+    version: 3.11
+build:
+  requirementsPath: requirements.txt
+  useCache: true
+run:
+  command: gunicorn -w 2 -b 0.0.0.0:8000 app:app
+  persistenceMount: /data
+  containerPort: 8000
