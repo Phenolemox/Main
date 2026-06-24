@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PCF Fight Manager Engine</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <canvas id="arenaCanvas"></canvas>
+
+  <main class="shell">
+    <header class="topbar glass">
+      <div>
+        <div class="eyebrow">PCF ENGINE // CANVAS MVP</div>
+        <h1>Fight Manager</h1>
+      </div>
+      <div class="userbox">
+        <span id="currentUser">offline</span>
+        <span id="balance">0 PCF</span>
+      </div>
+    </header>
+
+    <section id="loginPanel" class="panel glass">
+      <h2>Вход в арену</h2>
+      <div class="grid two">
+        <label>Логин<input id="loginUsername" value="player" /></label>
+        <label>Пароль<input id="loginPassword" value="player" type="password" /></label>
+      </div>
+      <div class="actions">
+        <button id="loginPlayerBtn">Войти player</button>
+        <button id="loginAdminBtn" class="ghost">Войти admin</button>
+        <button id="loginBtn" class="primary">Войти</button>
+      </div>
+    </section>
+
+    <nav class="tabs glass">
+      <button data-tab="arena" class="active">Арена</button>
+      <button data-tab="market">Рынок</button>
+      <button data-tab="stable">Мои бойцы</button>
+      <button data-tab="training">Тренировки</button>
+      <button data-tab="admin" id="adminTab">Админ</button>
+    </nav>
+
+    <section id="screen-arena" class="screen active">
+      <div class="section-title"><h2>События PCF</h2><button id="refreshBtn" class="ghost">Обновить</button></div>
+      <div id="eventsList" class="cards"></div>
+    </section>
+
+    <section id="screen-market" class="screen">
+      <div class="section-title"><h2>Рынок бойцов</h2></div>
+      <div id="marketList" class="cards"></div>
+    </section>
+
+    <section id="screen-stable" class="screen">
+      <div class="section-title"><h2>Моя конюшня</h2></div>
+      <div id="myFightersList" class="cards"></div>
+    </section>
+
+    <section id="screen-training" class="screen">
+      <div class="section-title"><h2>Тренировки</h2></div>
+      <div id="trainingList" class="cards"></div>
+    </section>
+
+    <section id="screen-admin" class="screen">
+      <div class="section-title">
+        <h2>Пульт промоутера</h2>
+        <button id="openEventModalBtn" class="primary">Создать событие</button>
+      </div>
+      <div id="adminSummary" class="cards"></div>
+    </section>
+  </main>
+
+  <div id="eventModal" class="modal hidden">
+    <form id="eventForm" class="modal-card glass">
+      <div class="section-title">
+        <h2>Новое событие</h2>
+        <button type="button" id="closeEventModalBtn" class="ghost">×</button>
+      </div>
+      <label>Название<input id="eventName" placeholder="PCF Blood Neon 01" required /></label>
+      <label>Описание<textarea id="eventDesc" placeholder="Анонс, сюжет, кард..."></textarea></label>
+      <div class="grid two">
+        <label>Статус
+          <select id="eventStatus">
+            <option value="draft">Черновик</option>
+            <option value="announced">Анонсировано</option>
+            <option value="bets_open">Ставки открыты</option>
+            <option value="bets_closed">Ставки закрыты</option>
+          </select>
+        </label>
+        <label>Тип
+          <select id="eventType">
+            <option value="normal">Обычное</option>
+            <option value="deadly">Смертельное</option>
+            <option value="exhibition">Выставочное</option>
+            <option value="partner">Партнёрское</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button type="button" id="cancelEventBtn" class="ghost">Отмена</button>
+        <button type="submit" id="createEventBtn" class="primary">Создать</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
